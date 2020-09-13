@@ -485,18 +485,6 @@
     \instituicao{Engineering School of S{\~a}o Carlos -- EESC-USP}
 }
 
-% ENGCOMP ==========================================================================
-    \ifthenelse{\equal{#1}{ENGCOMP}}{
-        \addto\captionsbrazil{
-            \area{Engenharia de Computa{\c c}{\~a}o}
-            \programa{PG-ENGCOMP}{Programa de Gradua{\c c}{\~a}o em Engenharia de Computa{\c c}{\~a}o}
-        }
-        \addto\captionsenglish{% ingles
-            \area{Computer Engineering}
-            \especialidade{Program in Computer Engineering}
-        }
-    }{
-
 % CCMC ==========================================================================
     \ifthenelse{\equal{#1}{CCMC}}{
         \addto\captionsbrazil{
@@ -559,18 +547,30 @@
                             \especialidade{-- Professional Masters in Mathematics, Statistics and Computing Applied to Industry}
                         }
                     }{
+% % ENGCOMP ==========================================================================
+%                         \ifthenelse{\equal{#1}{ENGCOMP}}{
+%                             \addto\captionsbrazil{
+%                                 \area{Engenharia de Computa{\c c}{\~a}o}
+%                                 \programa{PG-ENGCOMP}{Programa de Gradua{\c c}{\~a}o em Engenharia de Computa{\c c}{\~a}o}
+%                                 \especialidade{em Engenharia de Computa{\c c}{\~a}o}
+%                             }
+%                             \addto\captionsenglish{% ingles
+%                                 \area{Computer Engineering}
+%                                 \especialidade{Program in Computer Engineering}
+%                             }
+%                         }{
 % Outros ========================================================================
-                        \PackageError{ICMC}{Ilegal parameter of curso}{
-                            Unknow curso "#1"!
-                            Please, use "CCMC", "MAT", "PIPGES", "PROFMAT", or "MECAI". The option must be in upperrcase.
+                            \PackageError{ICMC}{Ilegal parameter of curso}{
+                                Unknow curso "#1"!
+                                Please, use "CCMC", "MAT", "PIPGES", "PROFMAT", or "MECAI". The option must be in upperrcase.
+                            }
+                            \stop
                         }
-                        \stop
-                    }
+                    % }
                 }
             }
         }
     }
-
 }
 
 % Redefinicao do comando \date do Latex
