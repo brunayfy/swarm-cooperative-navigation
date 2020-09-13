@@ -1,0 +1,137 @@
+\documentclass[
+	% -- opções da classe memoir --
+	11pt,				% tamanho da fonte
+	openright,			% capítulos começam em pág ímpar (insere página vazia caso preciso)
+	twoside,			% para impressão em recto e verso. Oposto a oneside
+	a4paper,			% tamanho do papel. 
+	% -- opções da classe abntex2 --
+	%chapter=TITLE,		% títulos de capítulos convertidos em letras maiúsculas
+	%section=TITLE,		% títulos de seções convertidos em letras maiúsculas
+	%subsection=TITLE,	% títulos de subseções convertidos em letras maiúsculas
+	%subsubsection=TITLE,% títulos de subsubseções convertidos em letras maiúsculas
+	% -- opções do pacote babel --
+	english,			% idioma adicional para hifenização
+	brazil				% o último idioma é o principal do documento
+	]{abntex2}
+
+% Pacotes básicos 
+\usepackage{lmodern}		% Usa a fonte Latin Modern
+\usepackage[T1]{fontenc}	% Selecao de codigos de fonte.
+\usepackage{indentfirst}	% Indenta o primeiro parágrafo de cada seção.
+\usepackage{color}			% Controle das cores
+\usepackage{graphicx}		% Inclusão de gráficos
+\usepackage{microtype} 		% para melhorias de justificação
+\usepackage{lipsum}			% para geração de dummy text
+\usepackage[brazilian,hyperpageref]{backref} % Paginas com as citações na bibl
+\usepackage[alf]{abntex2cite} % Citações padrão ABNT
+
+% Configurações de Pacotes
+%% Configurações do pacote backref ( Usado sem a opção hyperpageref de backref )
+\renewcommand{\backrefpagesname}{Citado na(s) página(s):~}
+%% Texto padrão antes do número das páginas
+\renewcommand{\backref}{}
+%% Define os textos da citação
+\renewcommand*{\backrefalt}[4]{
+	\ifcase #1 
+		Nenhuma citação no texto.
+	\or
+		Citado na página #2.
+	\else
+		Citado #1 vezes nas páginas #2.
+	\fi}%
+
+% Formatação da capa no padrão da USP
+\renewcommand{\imprimircapa}{
+\begin{capa}
+    \center
+        \ABNTEXchapterfont\Large UNIVERSIDADE DE SÃO PAULO \\ ESCOLA DE ENGENHARIA DE SÃO CARLOS \\ INSTITUTO DE CIÊNCIAS MATEMÁTICAS E DE COMPUTAÇÃO
+        \vspace*{1cm}
+        \vfill
+        \begin{center}
+        \ABNTEXchapterfont\bfseries\LARGE\imprimirtitulo
+        \end{center}
+        \vspace*{1cm}
+        \Large{v.1}
+        \vfill
+        \large\imprimirlocal
+        \\
+        \large\imprimirdata
+        \vspace*{1cm}
+\end{capa}
+}
+
+% Formatação da folha de rosto no padrão da USP
+\makeatletter
+\renewcommand{\folhaderostocontent}{
+\begin{center}
+    {\ABNTEXchapterfont\bfseries\Large\imprimirautor}
+    \vspace*{\fill}\vspace*{\fill}
+    \begin{center}
+    \ABNTEXchapterfont\bfseries\Large\imprimirtitulo
+    \end{center}
+    \vspace*{\fill}
+    \abntex@ifnotempty{\imprimirpreambulo}{
+    \hspace{.45\textwidth}
+    \begin{minipage}{.5\textwidth}
+    \SingleSpacing
+    \imprimirpreambulo
+    \vspace*{2cm}
+    \imprimirorientadorRotulo~\imprimirorientador
+    \end{minipage}
+    \vspace*{\fill}
+    }
+    \vspace*{\fill}
+    {\large\imprimirlocal}
+    \par
+    {\large\imprimirdata}
+    \vspace*{1cm}
+\end{center}
+}
+\makeatother
+
+% Configurações de aparência do PDF final
+%% alterando o aspecto da cor azul
+\definecolor{blue}{RGB}{41,5,195}
+
+%% informações do PDF
+\makeatletter
+\hypersetup{
+     	%pagebackref=true,
+		pdftitle={\@title}, 
+		pdfauthor={\@author},
+    	pdfsubject={\imprimirpreambulo},
+	    pdfcreator={LaTeX with abnTeX2},
+		pdfkeywords={abnt}{latex}{abntex}{abntex2}{trabalho acadêmico}, 
+		colorlinks=true,       		% false: boxed links; true: colored links
+    	linkcolor=blue,          	% color of internal links
+    	citecolor=blue,        		% color of links to bibliography
+    	filecolor=magenta,      		% color of file links
+		urlcolor=blue,
+		bookmarksdepth=4
+}
+\makeatother
+
+% Posiciona figuras e tabelas no topo da página quando adicionadas sozinhas
+% em um página em branco. Ver https://github.com/abntex/abntex2/issues/170
+\makeatletter
+\setlength{\@fptop}{5pt} % Set distance from top of page to first float
+\makeatother
+
+% Espaçamentos entre linhas e parágrafos 
+% O tamanho do parágrafo é dado por:
+\setlength{\parindent}{1.3cm}
+
+% Controle do espaçamento entre um parágrafo e outro:
+\setlength{\parskip}{0.2cm}  % tente também \onelineskip
+
+% Compila o índice
+\makeindex
+
+% Informações de dados para a capa e folha de rosto
+\titulo{Título do TCC}
+\autor{Bruna Yukari Fujii Yoshida}
+\local{São Carlos}
+\data{2020}
+\orientador{Valdir Grassi Junior}
+\instituicao{Universidade do São Paulo - USP}
+\preambulo{\Large{Trabalho de Conclusão de Curso apresentado à Escola de Engenharia de São Carlos, da Universidade de São Paulo \newline Curso de Engenharia de Computação}}

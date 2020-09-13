@@ -1,0 +1,103 @@
+\input{tex/config.tex} 
+
+\begin{document}
+
+% Seleciona o idioma do documento (conforme pacotes do babel)
+\selectlanguage{brazil}
+
+% Retira espaço extra obsoleto entre as frases
+\frenchspacing 
+
+% Elementos pré-textuais
+\imprimircapa
+
+\imprimirfolhaderosto
+
+% Dedicatória
+\begin{dedicatoria}
+   \vspace*{\fill}
+   \centering
+   \noindent
+   \textit{ Texto dedicatória.} \vspace*{\fill}
+\end{dedicatoria}
+
+% Agradecimentos
+\begin{agradecimentos}
+Texto agradecimento.
+\end{agradecimentos}
+
+% Sumário
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+% Lista de figuras
+\pdfbookmark[0]{\listfigurename}{lof}
+\listoffigures*
+\cleardoublepage
+
+% Lista de tabelas
+\pdfbookmark[0]{\listtablename}{lot}
+\listoftables*
+\cleardoublepage
+
+% Lista de abreviaturas e siglas
+\begin{siglas}
+  \item[Sigla1] Explicação Sigla1
+\end{siglas}
+
+% Lista de símbolos
+\begin{simbolos}
+  \item[$ \Gamma $] Letra grega Gama
+  \item[$ \Lambda $] Lambda
+\end{simbolos}
+
+% Resumos
+
+%% Português
+\setlength{\absparsep}{18pt} % ajusta o espaçamento dos parágrafos do resumo
+\begin{resumo}
+ Resumo em portguês.
+
+\textbf{Palavras-chave}: palavra1, palavra2, ..., palavran.
+\end{resumo}
+
+%% Inglês
+\begin{resumo}[Abstract]
+    \begin{otherlanguage*}{english}
+        English abstract.
+        
+        \vspace{\onelineskip}
+        
+        \noindent 
+        \textbf{Keywords}: word1. word2, ..., wordn.
+    \end{otherlanguage*}
+\end{resumo}
+
+% Elementos textuais
+\textual
+
+% Introdução (exemplo de capítulo sem numeração, mas presente no Sumário)
+\chapter{Introdução}
+\input{tex/introduction}
+
+% Elementos pós-textuais
+\postextual
+
+% Referências bibliográficas
+\bibliography{references.bib}
+
+% Apêndices
+\begin{apendicesenv}
+\partapendices
+\end{apendicesenv}
+
+% Anexos
+\begin{anexosenv}
+\partanexos
+\end{anexosenv}
+
+% Índice remissivo
+\printindex
+
+\end{document}
