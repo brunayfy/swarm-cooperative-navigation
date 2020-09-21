@@ -4,18 +4,18 @@ This is a bachelor's thesis project of the Electrical Engineering School of the 
 
 ## Chronogram
   
-|                              Activity                               | 10/9 | 17/9 | 24/9 | 01/10 | 08/10 | 15/10 | 22/10 | 29/10 |
-|---------------------------------------------------------------------|:----:|:----:|:----:|:-----:|:-----:|-------|-------|-------|
-| Implementation of swarm of robots and basic environment for testing | x    |      |      |       |       |       |       |       |
-| Implementation of cooperative navigation                              |      |  X   |      |       |       |       |       |       |
-| Implementation of minimum cohesion                                      |      |  X   |      |       |       |       |       |       |
-| Implementation of task of search and collect(foraging)                           |      |  x   |      |       |       |       |       |       |
-| Implementation of task of mapping in closed environment             |      |      |  x   |       |       |       |       |       |
-| Implementation of task of search and rescue in mapped environment      |      |      |      |   x   |       |       |       |       |
-| Implementation on simulation environment (CoppeliaSim)                |      |      |      |       |  x    |       |       |       |
-| Tests of performance and comparison with other methods             |      |      |      |       |       |  x    |       |       |
-| Monograph - Introduction, Body of work and conclusions             |      |      |      |       |       |       | x     |       |
-| Complete monograph for Advisor Revision                      |      |      |      |       |       |       |       | x     |
+|                              Activity                               | 10/9 | 21/9 | 24/9 | 28/9 | 01/10 | 08/10 | 15/10 | 22/10 | 29/10 |
+|---------------------------------------------------------------------|:----:|:----:|:----:|:-----:|:-----:|:-----:|-------|-------|-------|
+| Implementation of swarm of robots and basic environment for testing | x    |      |      |       |       |       |       |       |       |
+| Implementation of cooperative navigation                              |      |  ~~x~~   |  x    |       |       |       |       |       |       |
+| Implementation of minimum cohesion                                      |      |  ~~x~~   | x     |       |       |       |       |       |       |
+| Implementation of task of search and collect(foraging)                           |      |       |  x   |      |       |       |       |       |       |
+| Implementation of task of mapping in closed environment             |      |      |       |  x   |       |       |       |       |       |
+| Implementation of task of search and rescue in mapped environment      |      |      |      |       |   x   |       |       |       |       |
+| Implementation on simulation environment (CoppeliaSim)                |      |      |      |       |       |  x    |       |       |       |
+| Tests of performance and comparison with other methods             |      |      |      |       |       |       |  x    |       |       |
+| Monograph - Introduction, Body of work and conclusions             |      |      |      |       |       |       |       | x     |       |
+| Complete monograph for Advisor Revision                      |      |      |      |       |       |       |       |       | x     |
 
 
   
