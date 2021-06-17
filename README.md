@@ -4,24 +4,25 @@ This is a bachelor's thesis project of the Electrical Engineering School of the 
 
 ## Chronogram
   
-|                              Activity                               | 10/9 | 21/9 | 24/9 | 28/9 | 01/10 | 08/10 | 15/10 | 22/10 | 29/10 |
+|                              Activity                               | 17/6 | 28/6 | 12/7 | 26/7 | 02/8 | 16/8 | 30/8 | 13/09 | 27/9 |
 |---------------------------------------------------------------------|:----:|:----:|:----:|:-----:|:-----:|:-----:|-------|-------|-------|
 | Implementation of swarm of robots and basic environment for testing | x    |      |      |       |       |       |       |       |       |
-| Implementation of cooperative navigation                              |      |  ~~x~~   |  x    |       |       |       |       |       |       |
-| Implementation of minimum cohesion                                      |      |  ~~x~~   | x     |       |       |       |       |       |       |
-| Implementation of task of search and collect(foraging)                           |      |       |  x   |      |       |       |       |       |       |
+| Implementation of cooperative navigation                              |      |  ~~x~~   |      |       |       |       |       |       |       |
+| Implementation of task of search and collect(foraging)                           |      |  x     |     |      |       |       |       |       |       |
+| Implementation of minimum cohesion                                      |      |     | x     |       |       |       |       |       |       |
 | Implementation of task of mapping in closed environment             |      |      |       |  x   |       |       |       |       |       |
 | Implementation of task of search and rescue in mapped environment      |      |      |      |       |   x   |       |       |       |       |
-| Implementation on simulation environment (CoppeliaSim)                |      |      |      |       |       |  x    |       |       |       |
 | Tests of performance and comparison with other methods             |      |      |      |       |       |       |  x    |       |       |
-| Monograph - Introduction, Body of work and conclusions             |      |      |      |       |       |       |       | x     |       |
+| Monograph - Introduction, Teoric Fundamentation             |      |  x    |      |       |       |       |       |      |       |
+| Monograph - Literature Revision             |      |      |   x   |       |       |       |       |      |       |
+| Monograph - Body of work and conclusions             |      |      |      |       |       |       |       | x     |       |
 | Complete monograph for Advisor Revision                      |      |      |      |       |       |       |       |       | x     |
 
 
   
-|                              Activity                               | 05/11 | 12/11 | 19/11 | 26/11 | 04/12 |
+|                              Activity                               | 11/10 | 25/10 | 08/11 | 22/11 | 06/12 |
 |---------------------------------------------------------------------|-------|:-----:|-------|-------|:-----:|
-| Revised monograph (9/11/2020 must be revised by Advisor) | x     |       |       |       |       |
+| Revised monograph (9/11/2021 must be revised by Advisor) | x     |       |       |       |       |
 | Adjusts                                                             |       | x     | x     | x     |       |
-| Project presentation (23/11/2020 a 04/12/2020)                   |       |       |       |       | x     |
+| Project presentation (23/11/2021 a 04/12/2021)                   |       |       |       |       | x     |
 
