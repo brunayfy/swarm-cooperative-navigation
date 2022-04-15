@@ -1,6 +1,6 @@
 # swarm-cooperative-navigation
 
-This is a bachelor's thesis project of the Electrical Engineering School of the University of São Paulo.
+>This is a bachelor's thesis project of the Electrical Engineering School of the University of São Paulo.
 
 ## Chronogram
   
