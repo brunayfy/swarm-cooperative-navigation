@@ -26,16 +26,16 @@ SIMSETTINGS = [
     SimSettings(
         numDotBots=10,
         floorplanDrawing='''
+            ................##
+            ................##
             ..................
             ..................
-            ............##....
-            ............##....
-            ..................
-            ..................
+            ..............####
+            ..............####
             ''',
         initialPosition=(18, 4.5),
-        robot_radius=100,
-        show_radius=True
+        robot_radius=50,
+        show_radius=False
     )
 ]
 
@@ -63,6 +63,10 @@ def oneSim(simSetting):
 
     # drop the DotBots on the floorplan at their initial position
     (x, y) = simSetting.initialPosition
+    #TODO: Make all robots start from the begginning and entering one by one on each deploy
+    # rips_complex = gudhi.RipsComplex(
+    #     points=[[1, 0], [1, 1], [7, 0], [5, 10], [6, 15], [4, 6], [9, 6], [0, 14], [2, 19], [9, 17]],
+    #     max_edge_length=12.0)
     for dotBot in dotBots:
         dotBot.setInitialPosition(x, y)
 

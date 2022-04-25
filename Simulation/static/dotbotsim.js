@@ -118,7 +118,7 @@ function drawDotBots(data) {
         .transition()
         .attr("cx", (d) => scaleFactor * d.orchestratorview_x)
         .attr("cy", (d) => scaleFactor * d.orchestratorview_y);
-    //todo: Why there is this orchestratorview red circle?
+    // todo: Why there is this orchestratorview red circle?
     orchestratorview
         .enter().append("circle")
         .attr("cx", (d) => scaleFactor * d.orchestratorview_x)
@@ -154,15 +154,24 @@ function drawDotBots(data) {
         .enter().append("circle")
         .attr("cx", (d) => scaleFactor * d.x)
         .attr("cy", (d) => scaleFactor * d.y)
-        .attr("fill", "#00ffff")
-        .attr("r", data.robotRadius);
-    dotbots
-        .enter().append("circle")
-        .attr("cx", (d) => scaleFactor * d.x)
-        .attr("cy", (d) => scaleFactor * d.y)
         .attr("class", "dotbot")
         .attr("fill", (d, i) => dotbotcolors[i % 10])
         .attr("r", 10);
+
+    // dotbots range
+    if (data.showRadius){
+        var dotRange = svg.selectAll(".dotbotRadius")
+        .data(data.dotbots);
+    dotRange
+        .transition()
+        .attr("cx", (d) => scaleFactor * d.x)
+        .attr("cy", (d) => scaleFactor * d.y);
+    dotRange
+        .enter().append("circle")
+        .attr("class","dotbotRadius")
+        .attr("r", data.robotRadius);
+    }
+
 
     // disco map complete
     if (data.discomap.complete === true) {
@@ -171,7 +180,7 @@ function drawDotBots(data) {
         $(".discomapline").css({stroke: 'red'});
     }
 
-    // disco map dots
+    // disco map dots represent the object points that are touched by the robots
     var discomapdots = svg.selectAll(".discomapdot")
         .data(data.discomap.dots);
     discomapdots
@@ -187,7 +196,7 @@ function drawDotBots(data) {
         .exit()
         .remove();
 
-    // disco map lines
+    // disco map lines represent the aggregated lines formed by the points touched by robots
     var discomaplines = svg.selectAll(".discomapline")
         .data(data.discomap.lines);
     discomaplines

@@ -132,6 +132,7 @@
 
 .dotbotRadius {
     stroke: black;
-    fill: #00ffff;
+    fill: none;
+    stroke-dasharray: 8, 8.5
 }
 
