@@ -64,8 +64,7 @@ def main():
         update_plot(plot, robots_coordinates, simplices[1])
         fence_subcomplex = get_fence_subcomplex(map, robots_coordinates, simplices)
         skeleton_path = get_skeleton_path(simplices[1], fence_subcomplex, robots_coordinates, entrypoint_coordinate)
-        # push_robot(skeleton_path, robots_coordinates, entrypoint_coordinate)
-
+        push_robot(skeleton_path, fence_subcomplex['deployment_positions'], robots_coordinates, entrypoint_coordinate)
 
 
 if __name__ == '__main__':
