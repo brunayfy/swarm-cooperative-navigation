@@ -1,5 +1,6 @@
-from collections import defaultdict
 import math
+from collections import defaultdict
+from math import pi
 
 import gudhi
 import numpy as np
@@ -77,40 +78,40 @@ def get_fence_subcomplex(map: list[list], robots: list[list], simplices: list[li
 
     def get_deployment_angle(robots: list, one_simplex: list, one_simplices: list, uncov: list) -> float:
         theta_i_j_new, theta_j_i_new = [], []
-
         i, j = one_simplex
         for sigma in uncov:
             S_i, S_j = get_closest_fence_candidates(robots, one_simplex, one_simplices, sigma)
-            if S_i == []:
-                theta_i_j_new.append(sigma * 60)
+            if not S_i:
+                theta_i_j_new.append(sigma * pi / 3)
             else:
                 k_i = min([[k, abs(get_angle(robots[i], robots[j], robots[k]))] for k in S_i],
                           key=lambda x: x[1])[0]
                 theta_i_j_k_i = get_angle(robots[i], robots[j], robots[k_i])
-                if abs(theta_i_j_k_i) < 60:
+                if abs(theta_i_j_k_i) < pi / 3:
                     obstacle_simplices.append([i, k_i])  # TODO: Check this!
                 else:
-                    theta_i_j_new.append(sigma * min([60, abs(get_angle(robots[i], robots[j], robots[k_i]) / 2)]))
+                    theta_i_j_new.append(sigma * min([pi / 3, abs(theta_i_j_k_i / 2)]))
 
-            if S_j == []:
-                theta_j_i_new.append(-sigma * 60)
+            if not S_j:
+                theta_j_i_new.append(-sigma * pi / 3)
             else:
                 k_j = min([[k, abs(get_angle(robots[j], robots[i], robots[k]))] for k in S_j],
                           key=lambda x: x[1])[0]
-                theta_j_i_k_j = get_angle(robots[i], robots[j], robots[k_j])
+                theta_j_i_k_j = get_angle(robots[j], robots[i], robots[k_j])
 
-                if abs(theta_j_i_k_j) < 60:
+                if abs(theta_j_i_k_j) < pi / 3:
                     obstacle_simplices.append([i, k_j])  # TODO: Check this!
                 else:
-                    theta_j_i_new.append(-sigma * min([60, abs(get_angle(robots[j], robots[i], robots[k_j]) / 2)]))
+                    theta_j_i_new.append(-sigma * min([pi / 3, abs(theta_j_i_k_j / 2)]))
 
         return theta_i_j_new, theta_j_i_new
 
-    def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinate: list, deployment_angle: float) -> list:
+    def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinate: list,
+                                         deployment_angle: float) -> list:
         x1, y1 = robot_a_coordinate
         x2, y2 = robot_b_coordinate
-        x3 = math.cos(deployment_angle)*(x2 - x1) - math.sin(deployment_angle)*(y2 - y1) + x1 
-        y3 = math.sin(deployment_angle)*(x2 - x1) + math.cos(deployment_angle)*(y2 - y1) + y1
+        x3 = math.cos(deployment_angle) * (x2 - x1) - math.sin(deployment_angle) * (y2 - y1) + x1
+        y3 = math.sin(deployment_angle) * (x2 - x1) + math.cos(deployment_angle) * (y2 - y1) + y1
         return [x3, y3]
 
     def is_obstacle_simplex(robots, map, one_simplex) -> bool:
@@ -130,7 +131,7 @@ def get_fence_subcomplex(map: list[list], robots: list[list], simplices: list[li
     for one_simplex in normal_one_simplices:
         i, j = one_simplex
         uncov = get_one_simplex_uncov(one_simplex, simplices[2])
-        if uncov != []:
+        if uncov:
             theta_i_j_new, theta_j_i_new = get_deployment_angle(robots, one_simplex, normal_one_simplices, uncov)
             for theta in theta_i_j_new:
                 deployment_positions[i].append(get_deployment_absolute_position(robots[i], robots[j], theta))
@@ -147,12 +148,12 @@ def get_fence_subcomplex(map: list[list], robots: list[list], simplices: list[li
     return {
         'obstacle_simplices': obstacle_simplices,
         'frontier_simplices': frontier_simplices,
-        'deployment_positions'  : deployment_positions
+        'deployment_positions': deployment_positions
     }
 
 
 def get_skeleton_path(one_simplices, fence_subcomplex, robots_coordinates, root):
-    if one_simplices == []:
+    if not one_simplices:
         return []
 
     graph = get_graph(one_simplices, fence_subcomplex)
@@ -164,21 +165,23 @@ def get_skeleton_path(one_simplices, fence_subcomplex, robots_coordinates, root)
 
 
 def push_robot(skeleton_path: list, deployment_positions: dict, robots_coordinates: list, entrypoint_coordinate: list):
-    if skeleton_path == []:
+    if not skeleton_path:
         robots_coordinates.append(entrypoint_coordinate)
         return
 
     frontier, *follow = skeleton_path
-    if deployment_positions[frontier] != []:
+    frontier_pos = robots_coordinates[frontier]
+    if deployment_positions[frontier]:
         robots_coordinates[frontier] = deployment_positions[frontier][0]
     else:
-        print('What to do?')
+        print(
+            "The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration so that it doesn't choose this paths")
 
     current, moved = None, None
     for robot_index in follow:
         current = robots_coordinates[robot_index]
         if moved is None:
-            robots_coordinates[robot_index] = frontier
+            robots_coordinates[robot_index] = frontier_pos
         else:
             robots_coordinates[robot_index] = moved
         moved = current

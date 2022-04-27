@@ -45,7 +45,7 @@ def main():
     #     }
     entrypoint_coordinate = [1, 0]
     h = 0.866025
-    robots_coordinates = [[0,0],[1,0],[2,0],[0.5,h],[1.5,h],[2.5,h],[0,2],[1,2],[2,2]]
+    robots_coordinates = [[0, 0], [1, 0], [2, 0], [0.5, h], [1.5, h], [2.5, h], [0, 2], [1, 2], [2, 2]]
     map = {
         9: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         8: ['o', 'o', 'o', 0, 0, 0, 'o', 'o', 'o', 'o'],
@@ -61,8 +61,8 @@ def main():
     plot = init_plot(map)
     while True:
         simplices = get_simplices(robots_coordinates)
-        update_plot(plot, robots_coordinates, simplices[1])
         fence_subcomplex = get_fence_subcomplex(map, robots_coordinates, simplices)
+        update_plot(plot, robots_coordinates, simplices[1], fence_subcomplex)
         skeleton_path = get_skeleton_path(simplices[1], fence_subcomplex, robots_coordinates, entrypoint_coordinate)
         push_robot(skeleton_path, fence_subcomplex['deployment_positions'], robots_coordinates, entrypoint_coordinate)
 

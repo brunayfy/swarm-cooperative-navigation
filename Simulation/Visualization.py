@@ -31,22 +31,8 @@ def init_plot(map: dict):
     return {'robots_scatter': robots_scatter, 'ax': ax, 'simplices': [], 'texts': []}
 
 
-def update_plot(plot, robot_coordinates: list[float], one_simplices: list[list[int]]):
-    # Plotting robots
-    robot_x, robot_y = [], []
-    for x, y in robot_coordinates:
-        robot_x.append(x)
-        robot_y.append(y)
-    plot['robots_scatter'].set_offsets(np.c_[robot_x, robot_y])
-    
-    # Adding the id for the robots
-    if plot['texts']:
-        for text in plot['texts']:
-            text.remove()
-            plot['texts'] = []
-    for i in range(len(robot_coordinates)):
-        plot['texts'].append(plt.text(robot_x[i], robot_y[i], str(i)))
-
+def update_plot(plot, robot_coordinates: list[float], one_simplices: list[list[int]],
+                fence_subcomplex):
     # Plotting the one-simplices edges
     if plot['simplices']:
         for line in plot['simplices']:
@@ -55,6 +41,26 @@ def update_plot(plot, robot_coordinates: list[float], one_simplices: list[list[i
     for one_simplex in one_simplices:
         x1, y1 = robot_coordinates[one_simplex[0]]
         x2, y2 = robot_coordinates[one_simplex[1]]
-        plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='orange')[0])
+        if one_simplex in fence_subcomplex['frontier_simplices']:
+            plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='blue')[0])
+        elif one_simplex in fence_subcomplex['obstacle_simplices']:
+            plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='red')[0])
+        else:
+            plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='orange')[0])
 
-    #plt.pause(1)
+    # Plotting robots
+    robot_x, robot_y = [], []
+    for x, y in robot_coordinates:
+        robot_x.append(x)
+        robot_y.append(y)
+    plot['robots_scatter'].set_offsets(np.c_[robot_x, robot_y])
+
+    # Adding the id for the robots
+    if plot['texts']:
+        for text in plot['texts']:
+            text.remove()
+            plot['texts'] = []
+    for i in range(len(robot_coordinates)):
+        plot['texts'].append(plt.text(robot_x[i], robot_y[i], str(i)))
+
+    plt.pause(0.01)

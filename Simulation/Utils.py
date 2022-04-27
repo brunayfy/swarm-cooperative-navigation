@@ -1,6 +1,7 @@
 import heapq
 import math
 from collections import defaultdict
+from math import pi
 
 
 def distance(pos1, pos2):
@@ -14,16 +15,16 @@ def get_angle(i, j, k):
     j_x, j_y = j
     k_x, k_y = k
 
-    theta_i_j = math.degrees(math.atan2(j_y - i_y, j_x - i_x))
-    theta_i_k = math.degrees(math.atan2(k_y - i_y, k_x - i_x))
+    theta_i_j = math.atan2(j_y - i_y, j_x - i_x)
+    theta_i_k = math.atan2(k_y - i_y, k_x - i_x)
     theta_i_j_k = theta_i_k - theta_i_j
 
-    if theta_i_j_k < -180:
-        return theta_i_j_k + 360
-    elif -180 <= theta_i_j_k < 180:
+    if theta_i_j_k < -pi:
+        return theta_i_j_k + 2 * pi
+    elif -pi <= theta_i_j_k < pi:
         return theta_i_j_k
     else:
-        return theta_i_j_k - 360
+        return theta_i_j_k - 2 * pi
 
 
 def is_in_contact_with_obstacle(map, robot: list[float], sensor_range: int = 2) -> bool:
