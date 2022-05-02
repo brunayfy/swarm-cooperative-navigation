@@ -1,18 +1,14 @@
-import math
 from collections import defaultdict
-from math import pi
 
 import gudhi
-import numpy as np
 
-from Utils import (get_angle, get_graph, is_in_contact_with_obstacle,
-                   lazy_dijkstra,
-                   no_visible_robots_in_activated_touch_sensor_angle)
+from Utils import is_obstacle_simplex, get_deployment_absolute_position, get_deployment_angle, \
+    get_one_simplex_uncov, filter_one_simplices_exception, get_graph, lazy_dijkstra
 
 
-def get_simplices(robots: list[list], max_edge_length: float = math.sqrt(2)) -> dict:
+def get_simplices(robots: list[list], max_edge_length: float) -> dict:
     simplices = {0: [], 1: [], 2: []}
-    rips_complex = gudhi.RipsComplex(points=robots, max_edge_length=max_edge_length)
+    rips_complex = gudhi.RipsComplex(points=robots, max_edge_length=max_edge_length + 0.1)
     simplex_tree = rips_complex.create_simplex_tree(max_dimension=2)
 
     for simplex, _ in simplex_tree.get_filtration():
@@ -21,7 +17,7 @@ def get_simplices(robots: list[list], max_edge_length: float = math.sqrt(2)) -> 
     return simplices
 
 
-def get_fence_subcomplex(map: list[list], robots: list[list], simplices: list[list]):
+def get_fence_subcomplex(map_: dict, robots: list[list], simplices: dict, robots_radius: float):
     """
         1. Filter 1 simplices (exception set)
         2. For one simplex, compute theta sign for all two simplices neighbors
@@ -29,121 +25,45 @@ def get_fence_subcomplex(map: list[list], robots: list[list], simplices: list[li
         3. Classify the fence simplices in obstacle or frontier set
     """
 
-    def filter_one_simplices_exception(one_simplices: list[list]) -> dict:
-        # TODO: To be implemented later
-        return one_simplices, []
-
-    def get_one_simplex_uncov(one_simplex: list, two_simplices: list[list]) -> list:
-        previous_angle, current_angle = None, None
-        i, j = one_simplex
-        for two_simplex in two_simplices:
-            diff = [x for x in two_simplex if x not in one_simplex]
-            if len(diff) == 1:  # Checks 2 simplices that {i, j, k_u} that have one simplex {i, j} as their vertices
-                k_u = diff[0]
-                current_angle = get_angle(robots[i], robots[j], robots[k_u])
-                if previous_angle is None:
-                    previous_angle = current_angle
-                    continue
-                if np.sign(previous_angle) != np.sign(current_angle):
-                    return []
-
-        if current_angle is None:
-            return [-1, 1]
-
-        if np.sign(current_angle) == 0:
-            return [-1, 1]
-        elif np.sign(current_angle) > 0:
-            return [-1]
-        else:
-            return [1]
-
-    def get_closest_fence_candidates(robots: list, one_simplex: list, one_simplices: list[list], sigma: int):
-        S_i, S_j = [], []
-        i, j = one_simplex
-        for l1, l2 in one_simplices:
-            if [l1, l2] == [i, j]:
-                continue
-
-            if i in [l1, l2]:
-                l_i = l1 if i == l2 else l2
-                if np.sign(get_angle(robots[i], robots[j], robots[l_i])) == sigma:
-                    S_i.append(l_i)
-
-            if j in [l1, l2]:
-                l_j = l2 if l1 == j else l1
-                if np.sign(get_angle(robots[j], robots[i], robots[l_j])) == -sigma:
-                    S_j.append(l_j)
-
-        return S_i, S_j
-
-    def get_deployment_angle(robots: list, one_simplex: list, one_simplices: list, uncov: list) -> float:
-        theta_i_j_new, theta_j_i_new = [], []
-        i, j = one_simplex
-        for sigma in uncov:
-            S_i, S_j = get_closest_fence_candidates(robots, one_simplex, one_simplices, sigma)
-            if not S_i:
-                theta_i_j_new.append(sigma * pi / 3)
-            else:
-                k_i = min([[k, abs(get_angle(robots[i], robots[j], robots[k]))] for k in S_i],
-                          key=lambda x: x[1])[0]
-                theta_i_j_k_i = get_angle(robots[i], robots[j], robots[k_i])
-                if abs(theta_i_j_k_i) < pi / 3:
-                    obstacle_simplices.append([i, k_i])  # TODO: Check this!
-                else:
-                    theta_i_j_new.append(sigma * min([pi / 3, abs(theta_i_j_k_i / 2)]))
-
-            if not S_j:
-                theta_j_i_new.append(-sigma * pi / 3)
-            else:
-                k_j = min([[k, abs(get_angle(robots[j], robots[i], robots[k]))] for k in S_j],
-                          key=lambda x: x[1])[0]
-                theta_j_i_k_j = get_angle(robots[j], robots[i], robots[k_j])
-
-                if abs(theta_j_i_k_j) < pi / 3:
-                    obstacle_simplices.append([i, k_j])  # TODO: Check this!
-                else:
-                    theta_j_i_new.append(-sigma * min([pi / 3, abs(theta_j_i_k_j / 2)]))
-
-        return theta_i_j_new, theta_j_i_new
-
-    def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinate: list,
-                                         deployment_angle: float) -> list:
-        x1, y1 = robot_a_coordinate
-        x2, y2 = robot_b_coordinate
-        x3 = math.cos(deployment_angle) * (x2 - x1) - math.sin(deployment_angle) * (y2 - y1) + x1
-        y3 = math.sin(deployment_angle) * (x2 - x1) + math.cos(deployment_angle) * (y2 - y1) + y1
-        return [x3, y3]
-
-    def is_obstacle_simplex(robots, map, one_simplex) -> bool:
-        i, j = one_simplex
-        if (
-                is_in_contact_with_obstacle(map, robots[i]) and
-                is_in_contact_with_obstacle(map, robots[j]) and
-                no_visible_robots_in_activated_touch_sensor_angle(robots, robots[i]) and
-                no_visible_robots_in_activated_touch_sensor_angle(robots, robots[j])
-        ):
-            return True
-        return False
-
     obstacle_simplices, frontier_simplices = [], []
     normal_one_simplices, exception_one_simplices = filter_one_simplices_exception(simplices[1])
     deployment_positions = defaultdict(list)
+
+    # Robots that don't have any other robot near
+    one_simplices_robots = list(set(sum(simplices[1], [])))
+    zero_simplices_robots = sum(simplices[0], [])
+    diff = [[x] for x in zero_simplices_robots if x not in one_simplices_robots]
+
+    frontier_simplices += diff
+    for lonely_robot in diff:
+        # TODO: Set deployment position based on near obstacles and considering sensor radius
+        x, y = robots[lonely_robot[0]]
+        deployment_positions[lonely_robot[0]] = [[x, y + robots_radius]]
+
     for one_simplex in normal_one_simplices:
         i, j = one_simplex
-        uncov = get_one_simplex_uncov(one_simplex, simplices[2])
+        uncov = get_one_simplex_uncov(robots, one_simplex, simplices[2])
         if uncov:
-            theta_i_j_new, theta_j_i_new = get_deployment_angle(robots, one_simplex, normal_one_simplices, uncov)
+            theta_i_j_new, theta_j_i_new = get_deployment_angle(obstacle_simplices, robots, one_simplex,
+                                                                normal_one_simplices, uncov)
             for theta in theta_i_j_new:
                 deployment_positions[i].append(get_deployment_absolute_position(robots[i], robots[j], theta))
             for theta in theta_j_i_new:
                 deployment_positions[j].append(get_deployment_absolute_position(robots[j], robots[i], theta))
-            if is_obstacle_simplex(robots, map, one_simplex):  # TODO: Check obstacle/frontier order
+
+            if is_obstacle_simplex(robots, map_, one_simplex):  # TODO: Check obstacle/frontier order
                 obstacle_simplices.append(one_simplex)
                 i, j = one_simplex
+                # TODO: Check why adding {i} and {j} separately
                 obstacle_simplices.append([i])
                 obstacle_simplices.append([j])
+            elif one_simplex in obstacle_simplices:
+                pass  # Already added simplex to obstacles on get_deployment_angle
             else:
                 frontier_simplices.append(one_simplex)
+                frontier_simplices.append([i])
+                frontier_simplices.append([j])
+                # TODO: Check why adding {i} and {j} separately
 
     return {
         'obstacle_simplices': obstacle_simplices,
@@ -153,11 +73,10 @@ def get_fence_subcomplex(map: list[list], robots: list[list], simplices: list[li
 
 
 def get_skeleton_path(one_simplices, fence_subcomplex, robots_coordinates, root):
-    if not one_simplices:
+    if root not in robots_coordinates:
         return []
-
     graph = get_graph(one_simplices, fence_subcomplex)
-    dist, paths = lazy_dijkstra(graph, robots_coordinates.index(root))
+    dist, paths = lazy_dijkstra(graph, robots_coordinates.index(root), len(robots_coordinates))
     frontier_robots_indices = list(set(sum(fence_subcomplex['frontier_simplices'], [])))
     closest_frontier_robot_index = min(frontier_robots_indices, key=lambda d: dist[d])
     closest_path = paths[closest_frontier_robot_index]
@@ -175,7 +94,8 @@ def push_robot(skeleton_path: list, deployment_positions: dict, robots_coordinat
         robots_coordinates[frontier] = deployment_positions[frontier][0]
     else:
         print(
-            "The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration so that it doesn't choose this paths")
+            "The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration so that it doesn't "
+            "choose this paths")
 
     current, moved = None, None
     for robot_index in follow:
