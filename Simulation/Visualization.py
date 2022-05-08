@@ -1,36 +1,48 @@
+import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.patches import Rectangle
 
 
-def init_plot(map: dict):
+def init_plot(sim_map: dict):
     plt.ion()
     fig = plt.figure()
     fig.suptitle('Swarm Simulation')
     ax = fig.add_subplot(111)
     ax.grid()
-    ax.update_datalim([[0, 0], [10, 10]])
+    ax.update_datalim([[sim_map['boundary'][0][0] - 5, sim_map['boundary'][0][1] - 5], [sim_map['boundary'][1][0] + 5, sim_map['boundary'][1][1] + 5]])
     ax.autoscale_view()
     ax.set_xlabel('x')
     ax.set_ylabel('y')
-    ax.set_xticks(list(range(-50, 50)))
-    ax.set_yticks(list(range(-50, 50)))
 
+    # create robots and skeletons scatter
     robots_scatter = ax.scatter([], [], color=[1., 0.63647424, 0.33815827, 1.], label='robots')
-    skeleton_scatter = ax.scatter([], [], color='green', label='robots')
+    skeleton_scatter = ax.scatter([], [], color='green', label='skeleton path')
 
-    obstacles = {'x': [], 'y': []}
-    for y, row in map.items():
-        for x, value in enumerate(row):
-            if value == 'o':
-                obstacles['x'].append(x)
-                obstacles['y'].append(y)
-    obstacles_scatter = ax.scatter(obstacles['x'], obstacles['y'], marker='s',
-                                   color=[0.28039216, 0.33815827, 0.98516223, 1.], label='obstacles')
+    # draw map
+    ax.add_patch(Rectangle((sim_map['boundary'][0][0], sim_map['boundary'][0][1]),
+                sim_map['boundary'][1][0] - sim_map['boundary'][0][0], sim_map['boundary'][1][1] - sim_map['boundary'][0][1],
+                fc ='none', 
+                ec ='black',
+                lw = 5))
+
+    # draw obstacles
+    for obstacle in sim_map['obstacles']:
+        rect = matplotlib.patches.Rectangle((obstacle[0][0], obstacle[0][1]),
+                                            obstacle[1][0] - obstacle[0][0], obstacle[1][1] - obstacle[0][1],
+                                            color ='grey')
+        ax.add_patch(rect)
 
     ax.legend()
 
-    return {'skeleton_scatter': skeleton_scatter, 'skeleton_path': [], 'robots_scatter': robots_scatter, 'ax': ax,
-            'simplices': [], 'texts': []}
+    return {
+        'skeleton_scatter' : skeleton_scatter, 
+        'robots_scatter'   : robots_scatter, 
+        'ax'               : ax,
+        'skeleton_path'    : [], 
+        'simplices'        : [], 
+        'texts'            : []
+    }
 
 
 def update_plot(plot, robot_coordinates: list[float], one_simplices: list[list[int]], fence_subcomplex, skeleton_path):

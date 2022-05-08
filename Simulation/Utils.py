@@ -27,25 +27,7 @@ def get_angle(i, j, k):
     else:
         return theta_i_j_k - 2 * pi
 
-
-def is_in_contact_with_obstacle(map_, robot: list[float], sensor_range: int = 2) -> bool:
-    r_x, r_y = robot
-    map_max_y, map_max_y_row = next(iter(map_.items()))
-    map_max_x = len(map_max_y_row)
-    for i in range(-sensor_range, sensor_range):
-        for j in range(-sensor_range, sensor_range):
-            if i == 0 and j == 0:
-                continue
-            x = int(r_x) + i
-            y = int(r_y) + j
-            if 0 <= x < map_max_x and 0 <= y < map_max_y and map_[x][y] == 'o':
-                return True
     return False
-
-
-def no_visible_robots_in_activated_touch_sensor_angle(robots: list[list], robot: list) -> bool:
-    # Check if there are no robots in the touch sensor angle
-    return True
 
 
 def get_graph(one_simplices, fence_subcomplex):
@@ -107,18 +89,69 @@ def lazy_dijkstra(graph, root, n):
 
 # ------------------------- get_fence_subcomplex functions  ---------------------------#
 
-def is_obstacle_simplex(robots, map_, one_simplex) -> bool:
+def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_position: list, margin: float = 0.5):
+    cx, cy = current_position
+    dx, dy = deploy_position 
+    (m_x1, m_y1), (m_x2, m_y2) = sim_map['boundary']
+    is_obstacle = False
+    # check map
+    a_den = dx - cx
+    a = 0 if a_den == 0 else (dy - cy)/a_den
+    b = cy - a*cx
+    if dx <= m_x1:
+        dx = m_x1 + margin
+        dy = a*dx + b
+        is_obstacle = True
+    elif dx >= m_x2:
+        dx = m_x2 - margin
+        dy = a*dx + b
+        is_obstacle = True
+    if dy <= m_y1:
+        dy = m_y1 + margin
+        dx = (dy - b)/a
+        is_obstacle = True
+    elif dy >= m_y2:
+        dy = m_y2 - margin
+        dx = (dy - b)/a
+        is_obstacle = True
+
+
+    # check obstacles
+    a_den = dx - cx
+    a = 0 if a_den == 0 else (dy - cy)/a_den
+    b = cy - a*cx
+    for (o_x1, o_y1), (o_x2, o_y2) in sim_map['obstacles']:
+        if o_x1 <= dx <= o_x2:
+            if o_y1 <= dy <= o_y2:
+                if cx <= o_x1:
+                    dx = o_x1 - margin
+                    dy = a*dx + b
+                    is_obstacle = True
+                elif cx >= o_x2:
+                    dx = o_x2 + margin
+                    dy = a*dx + b
+                    is_obstacle = True
+                if cy <= o_y1:
+                    dy = o_y1 - margin
+                    dx = (dy - b)/a
+                    is_obstacle = True
+                elif cy >= o_y2:
+                    dy = o_y2 + margin
+                    dx = (dy - b)/a
+                    is_obstacle = True
+    
+    return {'pos':[dx, dy], 'is_obstacle':is_obstacle}
+
+def is_obstacle_simplex(robots, sim_map, one_simplex) -> bool:
     """
     Check if robots {i,j} are an obstacle simplex at a convex corner:
     We get the closest fence 1 simplex attached to i or j, say its {i,k} and calculate the angle theta ijk between them.
     If it is less than pi/3 than the robots j and k do not see each other due to occlusion by an obstacle
     """
     i, j = one_simplex
-    if (is_in_contact_with_obstacle(map_, robots[i]) and
-            is_in_contact_with_obstacle(map_, robots[j]) and
-            no_visible_robots_in_activated_touch_sensor_angle(robots, robots[i]) and
-            no_visible_robots_in_activated_touch_sensor_angle(robots, robots[j])):
-        return True
+    if (is_in_contact_with_obstacle(sim_map, robots[i]) and
+        is_in_contact_with_obstacle(sim_map, robots[j])):
+            return True
     return False
 
 
