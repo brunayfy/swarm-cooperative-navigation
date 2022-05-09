@@ -5,15 +5,18 @@ import gudhi
 from Utils import (ensure_valid_deploy_position,
                    filter_one_simplices_exception,
                    get_deployment_absolute_position, get_deployment_angle,
-                   get_graph, get_one_simplex_uncov, is_obstacle_simplex,
-                   lazy_dijkstra)
+                   get_graph, get_one_simplex_uncov,
+                   lazy_dijkstra, is_obstacle_simplex)
 
 
-def deploy_first_robots(sim_map: dict, robots: list, entrypoint: list, robots_radius: float):
-    robots.append(entrypoint)    
+def deploy_first_robots(sim_map: dict, robots: list, entrypoint: list, robots_radius: float, robot_is_obstacle: dict):
+    # Assuming the entrypoint is free of obstacles
+    robots.append(entrypoint)
     second_robot_deploy_position = [entrypoint[0], entrypoint[1] + robots_radius]
-    dx, dy = ensure_valid_deploy_position(sim_map, entrypoint, second_robot_deploy_position)
-    robots.append([dx, dy])
+    pos, is_obstacle = ensure_valid_deploy_position(sim_map, entrypoint, second_robot_deploy_position)
+    robots.append(pos)
+    if is_obstacle:
+        robot_is_obstacle[1] = True
 
 
 def get_simplices(robots: list, max_edge_length: float) -> dict:
@@ -27,7 +30,7 @@ def get_simplices(robots: list, max_edge_length: float) -> dict:
     return simplices
 
 
-def get_fence_subcomplex(map_: dict, robots: list, simplices: dict, robots_radius: float):
+def get_fence_subcomplex(robots: list, simplices: dict, robot_is_obstacle: dict):
     """
         1. Filter 1 simplices (exception set)
         2. For one simplex, compute theta sign for all two simplices neighbors
@@ -49,8 +52,9 @@ def get_fence_subcomplex(map_: dict, robots: list, simplices: dict, robots_radiu
                 deployment_positions[i].append(get_deployment_absolute_position(robots[i], robots[j], theta))
             for theta in theta_j_i_new:
                 deployment_positions[j].append(get_deployment_absolute_position(robots[j], robots[i], theta))
-
-            if one_simplex in obstacle_simplices:
+            if is_obstacle_simplex(one_simplex, robot_is_obstacle):
+                obstacle_simplices.append(one_simplex)
+            elif one_simplex in obstacle_simplices:
                 pass  # Already added simplex to obstacles on get_deployment_angle
             else:
                 frontier_simplices.append(one_simplex)
@@ -76,29 +80,39 @@ def get_skeleton_path(one_simplices, fence_subcomplex, robots, root):
     return closest_path
 
 
-def push_robot(sim_map: dict, skeleton_path: list, fence_subcomplex, deployment_positions: dict, robots: list, entrypoint: list):
+def push_robot(sim_map: dict, skeleton_path: list, deployment_positions: dict, robots: list, entrypoint: list,
+               robot_is_obstacle: dict):
     if not skeleton_path:
         robots.append(entrypoint)
         return
 
     frontier, *follow = skeleton_path
     frontier_pos = robots[frontier]
+    frontier_robot_is_obstacle = robot_is_obstacle[frontier]
+    current, moved, moved_index = None, None, None
+
     if deployment_positions[frontier]:
+        # Deploying robots on valid points. If there is an obstacle it will calculate a new deployment position
+        # to simulate robot moving to desired position and hitting an obstacle.
         pos, is_obstacle = ensure_valid_deploy_position(sim_map, frontier_pos, deployment_positions[frontier][0])
         robots[frontier] = pos
-        if is_obstacle: fence_subcomplex['obstacle_simplices'].append([frontier])
+        if is_obstacle:
+            robot_is_obstacle[frontier] = True
     else:
         print(
-            "The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration so that it doesn't "
-            "choose this paths")
+            "The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration on skeleton "
+            "construction so that it doesn't choose this paths")
 
-    current, moved = None, None
     for robot_index in follow:
         current = robots[robot_index]
         if moved is None:
             robots[robot_index] = frontier_pos
+            robot_is_obstacle[robot_index] = frontier_robot_is_obstacle
         else:
             robots[robot_index] = moved
+            robot_is_obstacle[robot_index] = robot_is_obstacle[moved_index]
         moved = current
+        moved_index = robot_index
 
     robots.append(entrypoint)
+    robot_is_obstacle[len(robots)-1] = robot_is_obstacle[moved_index]

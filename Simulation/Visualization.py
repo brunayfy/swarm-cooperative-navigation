@@ -10,7 +10,8 @@ def init_plot(sim_map: dict):
     fig.suptitle('Swarm Simulation')
     ax = fig.add_subplot(111)
     ax.grid()
-    ax.update_datalim([[sim_map['boundary'][0][0] - 5, sim_map['boundary'][0][1] - 5], [sim_map['boundary'][1][0] + 5, sim_map['boundary'][1][1] + 5]])
+    ax.update_datalim([[sim_map['boundary'][0][0] - 5, sim_map['boundary'][0][1] - 5],
+                       [sim_map['boundary'][1][0] + 5, sim_map['boundary'][1][1] + 5]])
     ax.autoscale_view()
     ax.set_xlabel('x')
     ax.set_ylabel('y')
@@ -18,35 +19,38 @@ def init_plot(sim_map: dict):
     # create robots and skeletons scatter
     robots_scatter = ax.scatter([], [], color=[1., 0.63647424, 0.33815827, 1.], label='robots')
     skeleton_scatter = ax.scatter([], [], color='green', label='skeleton path')
+    robots_obstacle_scatter = ax.scatter([], [], color='red', label='robots in contact with obstacle')
 
     # draw map
     ax.add_patch(Rectangle((sim_map['boundary'][0][0], sim_map['boundary'][0][1]),
-                sim_map['boundary'][1][0] - sim_map['boundary'][0][0], sim_map['boundary'][1][1] - sim_map['boundary'][0][1],
-                fc ='none', 
-                ec ='black',
-                lw = 5))
+                           sim_map['boundary'][1][0] - sim_map['boundary'][0][0],
+                           sim_map['boundary'][1][1] - sim_map['boundary'][0][1],
+                           fc='none',
+                           ec='black',
+                           lw=5))
 
     # draw obstacles
     for obstacle in sim_map['obstacles']:
         rect = matplotlib.patches.Rectangle((obstacle[0][0], obstacle[0][1]),
                                             obstacle[1][0] - obstacle[0][0], obstacle[1][1] - obstacle[0][1],
-                                            color ='grey')
+                                            color='grey')
         ax.add_patch(rect)
 
     ax.legend()
 
     return {
-        'skeleton_scatter' : skeleton_scatter, 
-        'robots_scatter'   : robots_scatter, 
-        'ax'               : ax,
-        'skeleton_path'    : [], 
-        'simplices'        : [], 
-        'texts'            : []
+        'robots_obstacle_scatter': robots_obstacle_scatter,
+        'skeleton_scatter': skeleton_scatter,
+        'robots_scatter': robots_scatter,
+        'ax': ax,
+        'skeleton_path': [],
+        'simplices': [],
+        'texts': []
     }
 
 
-def update_plot(plot, robot_coordinates: list[float], one_simplices: list[list[int]], fence_subcomplex, skeleton_path):
-
+def update_plot(plot, robot_coordinates: list[list[float]], one_simplices: list[list[int]], fence_subcomplex,
+                skeleton_path, robot_is_obstacle: dict):
     # Plotting the one-simplices edges
     skeleton_path_simplices = [[p1, p2] for p1, p2 in zip(skeleton_path[:-1], skeleton_path[1:])] if len(
         skeleton_path) > 1 else []
@@ -67,19 +71,26 @@ def update_plot(plot, robot_coordinates: list[float], one_simplices: list[list[i
             plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='orange')[0])
 
     # Plotting robots
+    # normal robots: orange
     robot_x, robot_y = [], []
     for i, (x, y) in enumerate(robot_coordinates):
-        if i in skeleton_path:
+        if i in skeleton_path or i in robot_is_obstacle:
             continue
         robot_x.append(x)
         robot_y.append(y)
     plot['robots_scatter'].set_offsets(np.c_[robot_x, robot_y])
-
+    # robots in the skeleton path: green
     robot_x, robot_y = [], []
     for p in skeleton_path:
         robot_x.append(robot_coordinates[p][0])
         robot_y.append(robot_coordinates[p][1])
     plot['skeleton_scatter'].set_offsets(np.c_[robot_x, robot_y])
+    # robots that are in contact with obstacle: red
+    robot_x, robot_y = [], []
+    for p in [index for index, status in robot_is_obstacle.items() if status]:
+        robot_x.append(robot_coordinates[p][0])
+        robot_y.append(robot_coordinates[p][1])
+    plot['robots_obstacle_scatter'].set_offsets(np.c_[robot_x, robot_y])
 
     # Plotting robots ids
     if plot['texts']:
@@ -89,4 +100,4 @@ def update_plot(plot, robot_coordinates: list[float], one_simplices: list[list[i
     for i in range(len(robot_coordinates)):
         plot['texts'].append(plt.text(robot_coordinates[i][0], robot_coordinates[i][1], str(i)))
 
-    plt.pause(0.01)
+    plt.pause(1)

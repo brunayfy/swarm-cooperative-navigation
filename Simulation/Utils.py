@@ -1,8 +1,9 @@
 import heapq
 import math
-import numpy as np
 from collections import defaultdict
 from math import pi
+
+import numpy as np
 
 
 def distance(pos1, pos2):
@@ -27,8 +28,6 @@ def get_angle(i, j, k):
     else:
         return theta_i_j_k - 2 * pi
 
-    return False
-
 
 def get_graph(one_simplices, fence_subcomplex):
     graph = defaultdict(list)
@@ -43,7 +42,7 @@ def get_graph(one_simplices, fence_subcomplex):
     return graph
 
 
-def lazy_dijkstra(graph, root, n):
+def lazy_dijkstra(graph, root: int, n: int) -> tuple[list[float], list[list[float]]]:
     # https://pythonalgos.com/dijkstras-algorithm-in-5-steps-with-python/
     # set up "inf" distances
     dist = [math.inf for _ in range(n)]
@@ -53,7 +52,7 @@ def lazy_dijkstra(graph, root, n):
     # set up visited node list
     visited = [False for _ in range(n)]
     # set up priority queue
-    pq = [(0, root)]
+    pq = [(0.0, root)]
     # while there are nodes to process
     while len(pq) > 0:
         # get the root, discard current distance
@@ -91,67 +90,67 @@ def lazy_dijkstra(graph, root, n):
 
 def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_position: list, margin: float = 0.5):
     cx, cy = current_position
-    dx, dy = deploy_position 
+    dx, dy = deploy_position
     (m_x1, m_y1), (m_x2, m_y2) = sim_map['boundary']
     is_obstacle = False
     # check map
     a_den = dx - cx
-    a = 0 if a_den == 0 else (dy - cy)/a_den
-    b = cy - a*cx
+    a = 0 if a_den == 0 else (dy - cy) / a_den
+    b = cy - a * cx
     if dx <= m_x1:
         dx = m_x1 + margin
-        dy = a*dx + b
+        dy = a * dx + b
         is_obstacle = True
     elif dx >= m_x2:
         dx = m_x2 - margin
-        dy = a*dx + b
+        dy = a * dx + b
         is_obstacle = True
     if dy <= m_y1:
         dy = m_y1 + margin
-        dx = (dy - b)/a
+        dx = cx if a == 0 else (dy - b) / a
         is_obstacle = True
     elif dy >= m_y2:
         dy = m_y2 - margin
-        dx = (dy - b)/a
+        dx = cx if a == 0 else (dy - b) / a
         is_obstacle = True
-
 
     # check obstacles
     a_den = dx - cx
-    a = 0 if a_den == 0 else (dy - cy)/a_den
-    b = cy - a*cx
+    a = 0 if a_den == 0 else (dy - cy) / a_den
+    b = cy - a * cx
     for (o_x1, o_y1), (o_x2, o_y2) in sim_map['obstacles']:
         if o_x1 <= dx <= o_x2:
             if o_y1 <= dy <= o_y2:
                 if cx <= o_x1:
                     dx = o_x1 - margin
-                    dy = a*dx + b
+                    dy = a * dx + b
                     is_obstacle = True
                 elif cx >= o_x2:
                     dx = o_x2 + margin
-                    dy = a*dx + b
+                    dy = a * dx + b
                     is_obstacle = True
                 if cy <= o_y1:
                     dy = o_y1 - margin
-                    dx = (dy - b)/a
+                    dx = cx if a == 0 else (dy - b) / a
                     is_obstacle = True
                 elif cy >= o_y2:
                     dy = o_y2 + margin
-                    dx = (dy - b)/a
+                    dx = cx if a == 0 else (dy - b) / a
                     is_obstacle = True
-    
-    return {'pos':[dx, dy], 'is_obstacle':is_obstacle}
 
-def is_obstacle_simplex(robots, sim_map, one_simplex) -> bool:
+    return [dx, dy], is_obstacle
+
+
+def is_obstacle_simplex(one_simplex: object, robot_is_obstacle) -> bool:
     """
-    Check if robots {i,j} are an obstacle simplex at a convex corner:
-    We get the closest fence 1 simplex attached to i or j, say its {i,k} and calculate the angle theta ijk between them.
-    If it is less than pi/3 than the robots j and k do not see each other due to occlusion by an obstacle
+    Check if robots {i,j} are an obstacle simplex:
+        If robots i and j are in touch with obstacles(consider that there are no robots visible in the direction of
+        the activated touch sensor because the robots cannot collide in this simulation)
+        them 1-simplex {i,j} is an obstacle simplex.
     """
     i, j = one_simplex
-    if (is_in_contact_with_obstacle(sim_map, robots[i]) and
-        is_in_contact_with_obstacle(sim_map, robots[j])):
-            return True
+    if robot_is_obstacle[i] and robot_is_obstacle[j]:
+        return True
     return False
 
 
@@ -165,7 +164,14 @@ def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinat
 
 
 def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
-                         one_simplices: list, uncov: list) -> float:
+                         one_simplices: list, uncov: list) -> tuple[list[float], list[float]]:
+    """
+    1. Calculate the deployment angle based on near robots
+    2. Check if robots {i,j} are an obstacle simplex at a convex corner:
+        We get the closest fence 1 simplex attached to i or j, say its {i,k} and
+        calculate the angle theta ijk between them.
+        If it is less than pi/3 than the robots j and k do not see each other due to occlusion by an obstacle
+    """
     theta_i_j_new, theta_j_i_new = [], []
     i, j = one_simplex
     for sigma in uncov:
@@ -239,6 +245,6 @@ def get_one_simplex_uncov(robots, one_simplex: list, two_simplices: list[list]) 
         return [1]
 
 
-def filter_one_simplices_exception(one_simplices: list[list]) -> dict:
+def filter_one_simplices_exception(one_simplices: list[list]) -> tuple:
     # TODO: To be implemented later
     return one_simplices, []
