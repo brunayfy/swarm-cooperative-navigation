@@ -93,7 +93,8 @@ def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_p
     dx, dy = deploy_position
     (m_x1, m_y1), (m_x2, m_y2) = sim_map['boundary']
     is_obstacle = False
-    # check map
+
+    # check if new deploy is inside map
     a_den = dx - cx
     a = 0 if a_den == 0 else (dy - cy) / a_den
     b = cy - a * cx
@@ -101,20 +102,25 @@ def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_p
         dx = m_x1 + margin
         dy = a * dx + b
         is_obstacle = True
-    elif dx >= m_x2:
+    elif dx >= m_x2 - margin:
         dx = m_x2 - margin
         dy = a * dx + b
         is_obstacle = True
+    elif dx <= m_x1 + margin or dx >= m_x2 - margin:
+        is_obstacle = True # robot near map wall
+
     if dy <= m_y1:
         dy = m_y1 + margin
         dx = cx if a == 0 else (dy - b) / a
         is_obstacle = True
     elif dy >= m_y2:
-        dy = m_y2 - margin
+        dy = m_y2  - margin
         dx = cx if a == 0 else (dy - b) / a
         is_obstacle = True
+    elif dy <= m_y1 + margin or dy >= m_y2 - margin:
+        is_obstacle = True # robot near map wall
 
-    # check obstacles
+    # check if new deploy is inside obstacles
     a_den = dx - cx
     a = 0 if a_den == 0 else (dy - cy) / a_den
     b = cy - a * cx
@@ -137,6 +143,10 @@ def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_p
                     dy = o_y2 + margin
                     dx = cx if a == 0 else (dy - b) / a
                     is_obstacle = True
+            elif  o_y1 - margin <= dy <= o_y2 + margin:
+                is_obstacle = True
+        elif o_x1 - margin <= dx <= o_x2 + margin and o_y1 - margin <= dy <= o_y2 + margin:
+            is_obstacle = True  # robot near obstacle
 
     return [dx, dy], is_obstacle
 

@@ -10,8 +10,8 @@ def init_plot(sim_map: dict):
     fig.suptitle('Swarm Simulation')
     ax = fig.add_subplot(111)
     ax.grid()
-    ax.update_datalim([[sim_map['boundary'][0][0] - 5, sim_map['boundary'][0][1] - 5],
-                       [sim_map['boundary'][1][0] + 5, sim_map['boundary'][1][1] + 5]])
+    ax.update_datalim([[sim_map['boundary'][0][0] - 1, sim_map['boundary'][0][1] - 1],
+                       [sim_map['boundary'][1][0] + 1, sim_map['boundary'][1][1] + 1]])
     ax.autoscale_view()
     ax.set_xlabel('x')
     ax.set_ylabel('y')
@@ -19,7 +19,7 @@ def init_plot(sim_map: dict):
     # create robots and skeletons scatter
     robots_scatter = ax.scatter([], [], color=[1., 0.63647424, 0.33815827, 1.], label='robots')
     skeleton_scatter = ax.scatter([], [], color='green', label='skeleton path')
-    robots_obstacle_scatter = ax.scatter([], [], color='red', label='robots in contact with obstacle')
+    robots_obstacle_scatter = ax.scatter([], [], color='red', label='robots in contact with obstacles')
 
     # draw map
     ax.add_patch(Rectangle((sim_map['boundary'][0][0], sim_map['boundary'][0][1]),
