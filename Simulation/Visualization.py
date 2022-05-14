@@ -4,100 +4,91 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 
 
-def init_plot(sim_map: dict):
-    plt.ion()
-    fig = plt.figure()
-    fig.suptitle('Swarm Simulation')
-    ax = fig.add_subplot(111)
-    ax.grid()
-    ax.update_datalim([[sim_map['boundary'][0][0] - 1, sim_map['boundary'][0][1] - 1],
-                       [sim_map['boundary'][1][0] + 1, sim_map['boundary'][1][1] + 1]])
-    ax.autoscale_view()
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
+class Plot:
+    def __init__(self, controller):
+        plt.ion()
+        fig = plt.figure()
+        fig.suptitle('Swarm Simulation')
+        ax = fig.add_subplot(111)
+        ax.grid()
+        (m_x1, m_y1), (m_x2, m_y2) = controller.map['boundary']
+        ax.update_datalim([[m_x1 - 5, m_y1 - 5], [m_x2 + 5, m_y2 + 5]])
+        ax.autoscale_view()
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
 
-    # create robots and skeletons scatter
-    robots_scatter = ax.scatter([], [], color=[1., 0.63647424, 0.33815827, 1.], label='robots')
-    skeleton_scatter = ax.scatter([], [], color='green', label='skeleton path')
-    robots_obstacle_scatter = ax.scatter([], [], color='red', label='robots in contact with obstacles')
+        # draw map
+        ax.add_patch(Rectangle((m_x1, m_y1),
+                    m_x2 - m_x1, m_y2 - m_y1,
+                    fc ='none', 
+                    ec ='black',
+                    lw = 5))
 
-    # draw map
-    ax.add_patch(Rectangle((sim_map['boundary'][0][0], sim_map['boundary'][0][1]),
-                           sim_map['boundary'][1][0] - sim_map['boundary'][0][0],
-                           sim_map['boundary'][1][1] - sim_map['boundary'][0][1],
-                           fc='none',
-                           ec='black',
-                           lw=5))
+        # draw obstacles
+        for (o_x1, o_y1), (o_x2, o_y2) in controller.map['obstacles']:
+            rect = matplotlib.patches.Rectangle((o_x1, o_y1),
+                                                o_x2 - o_x1, o_y2 - o_y1,
+                                                color ='grey')
+            ax.add_patch(rect)
 
-    # draw obstacles
-    for obstacle in sim_map['obstacles']:
-        rect = matplotlib.patches.Rectangle((obstacle[0][0], obstacle[0][1]),
-                                            obstacle[1][0] - obstacle[0][0], obstacle[1][1] - obstacle[0][1],
-                                            color='grey')
-        ax.add_patch(rect)
+        ax.legend()
+        
+        self.ax = ax
+        self.robots_scatter = ax.scatter([], [], color=[1., 0.63647424, 0.33815827, 1.], label='robots')
+        self.robots_obstacle_scatter = ax.scatter([], [], color='red', label='robots in contact with obstacles')
+        self.skeleton_scatter = ax.scatter([], [], color='green', label='skeleton path')
+        self.controller = controller
+        self.simplices, self.texts = [], []
 
-    ax.legend()
+        self.update_plot()
 
-    return {
-        'robots_obstacle_scatter': robots_obstacle_scatter,
-        'skeleton_scatter': skeleton_scatter,
-        'robots_scatter': robots_scatter,
-        'ax': ax,
-        'skeleton_path': [],
-        'simplices': [],
-        'texts': []
-    }
+    def update_plot(self):
+        # plotting the one-simplices edges
+        skeleton_path_simplices = [[p1, p2] for p1, p2 in zip(self.controller.skeleton_path[:-1], self.controller.skeleton_path[1:])] if len(self.controller.skeleton_path) > 1 else []
+        if self.simplices:
+            for line in self.simplices:
+                line.remove()
+            self.simplices = []
+        for one_simplex in self.controller.simplices[1]:
+            x1, y1 = self.controller.robots[one_simplex[0]]
+            x2, y2 = self.controller.robots[one_simplex[1]]
+            if one_simplex in self.controller.fence_subcomplex['frontier_simplices']:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='blue')[0])
+            elif one_simplex in self.controller.fence_subcomplex['obstacle_simplices']:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='red')[0])
+            elif one_simplex in skeleton_path_simplices:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='green')[0])
+            else:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='orange')[0])
 
+        # plotting robots
+        robot_x, robot_y = [], []
+        for i, (x, y) in enumerate(self.controller.robots):
+            if i in self.controller.skeleton_path or i in self.controller.robot_is_obstacle:
+                continue
+            robot_x.append(x)
+            robot_y.append(y)
+        self.robots_scatter.set_offsets(np.c_[robot_x, robot_y])
 
-def update_plot(plot, robot_coordinates: list[list[float]], one_simplices: list[list[int]], fence_subcomplex,
-                skeleton_path, robot_is_obstacle: dict):
-    # Plotting the one-simplices edges
-    skeleton_path_simplices = [[p1, p2] for p1, p2 in zip(skeleton_path[:-1], skeleton_path[1:])] if len(
-        skeleton_path) > 1 else []
-    if plot['simplices']:
-        for line in plot['simplices']:
-            line.remove()
-        plot['simplices'] = []
-    for one_simplex in one_simplices:
-        x1, y1 = robot_coordinates[one_simplex[0]]
-        x2, y2 = robot_coordinates[one_simplex[1]]
-        if one_simplex in fence_subcomplex['frontier_simplices']:
-            plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='blue')[0])
-        elif one_simplex in fence_subcomplex['obstacle_simplices']:
-            plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='red')[0])
-        elif one_simplex in skeleton_path_simplices:
-            plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='green')[0])
-        else:
-            plot['simplices'].append(plot['ax'].plot([x1, x2], [y1, y2], color='orange')[0])
+        robot_x, robot_y = [], []
+        for p in self.controller.skeleton_path:
+            robot_x.append(self.controller.robots[p][0])
+            robot_y.append(self.controller.robots[p][1])
+        self.skeleton_scatter.set_offsets(np.c_[robot_x, robot_y])
 
-    # Plotting robots
-    # normal robots: orange
-    robot_x, robot_y = [], []
-    for i, (x, y) in enumerate(robot_coordinates):
-        if i in skeleton_path or i in robot_is_obstacle:
-            continue
-        robot_x.append(x)
-        robot_y.append(y)
-    plot['robots_scatter'].set_offsets(np.c_[robot_x, robot_y])
-    # robots in the skeleton path: green
-    robot_x, robot_y = [], []
-    for p in skeleton_path:
-        robot_x.append(robot_coordinates[p][0])
-        robot_y.append(robot_coordinates[p][1])
-    plot['skeleton_scatter'].set_offsets(np.c_[robot_x, robot_y])
-    # robots that are in contact with obstacle: red
-    robot_x, robot_y = [], []
-    for p in [index for index, status in robot_is_obstacle.items() if status]:
-        robot_x.append(robot_coordinates[p][0])
-        robot_y.append(robot_coordinates[p][1])
-    plot['robots_obstacle_scatter'].set_offsets(np.c_[robot_x, robot_y])
+        # robots that are in contact with obstacle: red
+        robot_x, robot_y = [], []
+        for p in [index for index, status in self.controller.robot_is_obstacle.items() if status]:
+            robot_x.append(self.controller.robots[p][0])
+            robot_y.append(self.controller.robots[p][1])
+        self.robots_obstacle_scatter.set_offsets(np.c_[robot_x, robot_y])
 
-    # Plotting robots ids
-    if plot['texts']:
-        for text in plot['texts']:
-            text.remove()
-            plot['texts'] = []
-    for i in range(len(robot_coordinates)):
-        plot['texts'].append(plt.text(robot_coordinates[i][0], robot_coordinates[i][1], str(i)))
+        # plotting robots ids
+        if self.texts:
+            for text in self.texts:
+                text.remove()
+                self.texts = []
+        for i in range(len(self.controller.robots)):
+            self.texts.append(plt.text(self.controller.robots[i][0], self.controller.robots[i][1], str(i)))
 
-    plt.pause(1)
+        plt.pause(0.01)

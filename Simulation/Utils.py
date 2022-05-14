@@ -1,9 +1,8 @@
 import heapq
 import math
+import numpy as np
 from collections import defaultdict
 from math import pi
-
-import numpy as np
 
 
 def distance(pos1, pos2):
@@ -42,7 +41,7 @@ def get_graph(one_simplices, fence_subcomplex):
     return graph
 
 
-def lazy_dijkstra(graph, root: int, n: int) -> tuple[list[float], list[list[float]]]:
+def lazy_dijkstra(graph, root, n):
     # https://pythonalgos.com/dijkstras-algorithm-in-5-steps-with-python/
     # set up "inf" distances
     dist = [math.inf for _ in range(n)]
@@ -52,7 +51,7 @@ def lazy_dijkstra(graph, root: int, n: int) -> tuple[list[float], list[list[floa
     # set up visited node list
     visited = [False for _ in range(n)]
     # set up priority queue
-    pq = [(0.0, root)]
+    pq = [(0, root)]
     # while there are nodes to process
     while len(pq) > 0:
         # get the root, discard current distance
@@ -174,14 +173,7 @@ def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinat
 
 
 def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
-                         one_simplices: list, uncov: list) -> tuple[list[float], list[float]]:
-    """
-    1. Calculate the deployment angle based on near robots
-    2. Check if robots {i,j} are an obstacle simplex at a convex corner:
-        We get the closest fence 1 simplex attached to i or j, say its {i,k} and
-        calculate the angle theta ijk between them.
-        If it is less than pi/3 than the robots j and k do not see each other due to occlusion by an obstacle
-    """
+                         one_simplices: list, uncov: list) -> float:
     theta_i_j_new, theta_j_i_new = [], []
     i, j = one_simplex
     for sigma in uncov:
@@ -255,6 +247,6 @@ def get_one_simplex_uncov(robots, one_simplex: list, two_simplices: list[list]) 
         return [1]
 
 
-def filter_one_simplices_exception(one_simplices: list[list]) -> tuple:
+def filter_one_simplices_exception(one_simplices: list[list]) -> dict:
     # TODO: To be implemented later
     return one_simplices, []
