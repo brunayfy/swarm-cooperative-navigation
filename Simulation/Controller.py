@@ -1,6 +1,5 @@
 from pathlib import Path
 from collections import defaultdict
-from xmlrpc.client import boolean
 
 import gudhi
 import yaml
@@ -20,7 +19,7 @@ class Controller:
         self.map = config['map']
         self.entrypoint = self.map['entrypoint']
         self.robot_radius = config['robot_radius']
-        self.robots, self.skeleton_path, self.fence_subcomplex = [], [], []
+        self.robots, self.skeleton_path, self.fence_subcomplex = [], [], {}
         self.simplices = {0: [], 1: [], 2: []}
         self.robot_is_obstacle = defaultdict(bool)
 
@@ -131,7 +130,6 @@ class Controller:
 
     def is_full_covered(self) -> bool:
         return False
-    
 
     def run_iter(self):
         self._push_robot()

@@ -1,8 +1,9 @@
 import heapq
 import math
-import numpy as np
 from collections import defaultdict
 from math import pi
+
+import numpy as np
 
 
 def distance(pos1, pos2):
@@ -51,7 +52,7 @@ def lazy_dijkstra(graph, root, n):
     # set up visited node list
     visited = [False for _ in range(n)]
     # set up priority queue
-    pq = [(0, root)]
+    pq = [(0.0, root)]
     # while there are nodes to process
     while len(pq) > 0:
         # get the root, discard current distance
@@ -87,7 +88,14 @@ def lazy_dijkstra(graph, root, n):
 
 # ------------------------- get_fence_subcomplex functions  ---------------------------#
 
-def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_position: list, margin: float = 0.5):
+def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_position: list,
+                                 obstacle_radius: float = 0.5, margin: float = 0.05):
+    """
+    Check if the deployment position is:
+        1. valid(it's not inside obstacle or outside map): keep position,
+            else move to the closest valid position(-margin)
+        2. is near(obstacle_radius) walls or obstacle: is_obstacle == True
+    """
     cx, cy = current_position
     dx, dy = deploy_position
     (m_x1, m_y1), (m_x2, m_y2) = sim_map['boundary']
@@ -101,23 +109,23 @@ def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_p
         dx = m_x1 + margin
         dy = a * dx + b
         is_obstacle = True
-    elif dx >= m_x2 - margin:
+    elif dx >= m_x2 - obstacle_radius:
         dx = m_x2 - margin
         dy = a * dx + b
         is_obstacle = True
-    elif dx <= m_x1 + margin or dx >= m_x2 - margin:
-        is_obstacle = True # robot near map wall
+    elif dx <= m_x1 + obstacle_radius or dx >= m_x2 - obstacle_radius:
+        is_obstacle = True  # robot near map wall
 
     if dy <= m_y1:
         dy = m_y1 + margin
         dx = cx if a == 0 else (dy - b) / a
         is_obstacle = True
     elif dy >= m_y2:
-        dy = m_y2  - margin
+        dy = m_y2 - margin
         dx = cx if a == 0 else (dy - b) / a
         is_obstacle = True
-    elif dy <= m_y1 + margin or dy >= m_y2 - margin:
-        is_obstacle = True # robot near map wall
+    elif dy <= m_y1 + obstacle_radius or dy >= m_y2 - obstacle_radius:
+        is_obstacle = True  # robot near map wall
 
     # check if new deploy is inside obstacles
     a_den = dx - cx
@@ -142,9 +150,10 @@ def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_p
                     dy = o_y2 + margin
                     dx = cx if a == 0 else (dy - b) / a
                     is_obstacle = True
-            elif  o_y1 - margin <= dy <= o_y2 + margin:
+            elif o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
                 is_obstacle = True
-        elif o_x1 - margin <= dx <= o_x2 + margin and o_y1 - margin <= dy <= o_y2 + margin:
+        elif o_x1 - obstacle_radius <= dx <= o_x2 + obstacle_radius and \
+                o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
             is_obstacle = True  # robot near obstacle
 
     return [dx, dy], is_obstacle
@@ -173,7 +182,7 @@ def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinat
 
 
 def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
-                         one_simplices: list, uncov: list) -> float:
+                         one_simplices: list, uncov: list) -> tuple[list[float], list[float]]:
     theta_i_j_new, theta_j_i_new = [], []
     i, j = one_simplex
     for sigma in uncov:
@@ -247,6 +256,6 @@ def get_one_simplex_uncov(robots, one_simplex: list, two_simplices: list[list]) 
         return [1]
 
 
-def filter_one_simplices_exception(one_simplices: list[list]) -> dict:
+def filter_one_simplices_exception(one_simplices: list[list]) -> tuple[list[list], list]:
     # TODO: To be implemented later
     return one_simplices, []

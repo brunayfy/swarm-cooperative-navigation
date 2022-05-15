@@ -12,23 +12,23 @@ class Plot:
         ax = fig.add_subplot(111)
         ax.grid()
         (m_x1, m_y1), (m_x2, m_y2) = controller.map['boundary']
-        ax.update_datalim([[m_x1 - 5, m_y1 - 5], [m_x2 + 5, m_y2 + 5]])
+        ax.update_datalim([[m_x1 - 0.5, m_y1 - 0.5], [m_x2 + 0.5, m_y2 + 0.5]])
         ax.autoscale_view()
         ax.set_xlabel('x')
         ax.set_ylabel('y')
 
         # draw map
         ax.add_patch(Rectangle((m_x1, m_y1),
-                    m_x2 - m_x1, m_y2 - m_y1,
-                    fc ='none', 
-                    ec ='black',
-                    lw = 5))
+                               m_x2 - m_x1, m_y2 - m_y1,
+                               fc='none',
+                               ec='black',
+                               lw=5))
 
         # draw obstacles
         for (o_x1, o_y1), (o_x2, o_y2) in controller.map['obstacles']:
             rect = matplotlib.patches.Rectangle((o_x1, o_y1),
                                                 o_x2 - o_x1, o_y2 - o_y1,
-                                                color ='grey')
+                                                color='grey')
             ax.add_patch(rect)
 
         ax.legend()
@@ -44,7 +44,9 @@ class Plot:
 
     def update_plot(self):
         # plotting the one-simplices edges
-        skeleton_path_simplices = [[p1, p2] for p1, p2 in zip(self.controller.skeleton_path[:-1], self.controller.skeleton_path[1:])] if len(self.controller.skeleton_path) > 1 else []
+        skeleton_path_simplices = [[p1, p2] for p1, p2 in
+                                   zip(self.controller.skeleton_path[:-1], self.controller.skeleton_path[1:])] \
+                                    if len(self.controller.skeleton_path) > 1 else []
         if self.simplices:
             for line in self.simplices:
                 line.remove()
@@ -91,4 +93,4 @@ class Plot:
         for i in range(len(self.controller.robots)):
             self.texts.append(plt.text(self.controller.robots[i][0], self.controller.robots[i][1], str(i)))
 
-        plt.pause(0.01)
+        plt.pause(1)
