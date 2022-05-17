@@ -54,6 +54,7 @@ class Plot:
         for one_simplex in self.controller.simplices[1]:
             x1, y1 = self.controller.robots[one_simplex[0]]
             x2, y2 = self.controller.robots[one_simplex[1]]
+            # TODO: Make the 1 simplex and 2 simplex as tuples so that [0,2] = [2,0]
             if one_simplex in self.controller.fence_subcomplex['frontier_simplices']:
                 self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='blue')[0])
             elif one_simplex in self.controller.fence_subcomplex['obstacle_simplices']:
@@ -66,7 +67,7 @@ class Plot:
         # plotting robots
         robot_x, robot_y = [], []
         for i, (x, y) in enumerate(self.controller.robots):
-            if i in self.controller.skeleton_path or i in self.controller.robot_is_obstacle:
+            if i in self.controller.skeleton_path or self.controller.robot_is_obstacle[i]:
                 continue
             robot_x.append(x)
             robot_y.append(y)

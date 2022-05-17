@@ -163,8 +163,8 @@ def is_obstacle_simplex(one_simplex: object, robot_is_obstacle) -> bool:
     """
     Check if robots {i,j} are an obstacle simplex:
         If robots i and j are in touch with obstacles(consider that there are no robots visible in the direction of
-        the activated touch sensor because the robots cannot collide in this simulation)
-        them 1-simplex {i,j} is an obstacle simplex.
+        the activated touch sensor because the robots cannot collide in this simulation) and the contact angle is in
+        the expanding direction uncov, them 1-simplex {i,j} is an obstacle simplex.
     """
     i, j = one_simplex
     if robot_is_obstacle[i] and robot_is_obstacle[j]:
