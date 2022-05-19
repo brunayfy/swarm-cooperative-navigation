@@ -9,7 +9,7 @@ from Utils import (ensure_valid_deploy_position,
                    filter_one_simplices_exception,
                    get_deployment_absolute_position, get_deployment_angle,
                    get_graph, get_one_simplex_uncov, is_obstacle_simplex,
-                   lazy_dijkstra)
+                   lazy_dijkstra, Map, FenceSubcomplex)
 
 
 class Controller:
@@ -17,10 +17,12 @@ class Controller:
         with open(Path(__file__).parent / config_path, 'r') as f:
             config = yaml.safe_load(f.read())[sim_id]
 
-        self.map = config['map']
-        self.entrypoint = self.map['entrypoint']
+        self.map = Map(config['map']['boundary'], config['map']['obstacles'])
+        self.entrypoint = config['map']['entrypoint']
         self.robot_radius = config['robot_radius']
-        self.robots, self.skeleton_path, self.fence_subcomplex = [], [], {}
+
+        self.robots, self.skeleton_path = [], []
+        self.fence_subcomplex = FenceSubcomplex([],[])
         self.simplices = {0: [], 1: [], 2: []}
         self.robot_is_obstacle = defaultdict(bool)
 
@@ -28,7 +30,7 @@ class Controller:
         self.robots.append(self.entrypoint)
         # Deploy second robot in an angle of pi/3 of the first one TODO: treat cases were there is obstacles
         # second_robot_deploy_position = get_deployment_absolute_position(self.entrypoint[0], self.entrypoint[1], -math.pi/3)
-        second_robot_deploy_position = [self.entrypoint[0]+0.5, self.entrypoint[1] + 1]
+        second_robot_deploy_position = [self.entrypoint[0] + 0.5, self.entrypoint[1] + 1]
         pos, is_obstacle = ensure_valid_deploy_position(self.map, self.entrypoint, second_robot_deploy_position)
         self.robots.append(pos)
         if is_obstacle:
@@ -74,7 +76,7 @@ class Controller:
             a = (robot_y2 - robot_y1) / a_den
             b = robot_y1 - a * robot_x1
 
-        for (obs_x1, obs_y1), (obs_x2, obs_y2) in self.map['obstacles']:
+        for (obs_x1, obs_y1), (obs_x2, obs_y2) in self.map.obstacles:
             if a_den == 0:
                 print("check this case where there is a vertically line(two robots are vertically aligned)!")
                 if obs_x1 <= robot_x1 <= obs_x2 and self._point_inside_line(robot_x1, obs_y1, robot_x1, robot_y1, robot_x2, robot_y2):
@@ -140,16 +142,12 @@ class Controller:
                     frontier_simplices.append([j])
                     # TODO: Check why adding {i} and {j} separately
 
-        self.fence_subcomplex = {
-            'obstacle_simplices': obstacle_simplices,
-            'frontier_simplices': frontier_simplices,
-            'deployment_positions': self.deployment_positions
-        }
+        self.fence_subcomplex = FenceSubcomplex(obstacle_simplices, frontier_simplices)
 
     def _update_skeleton_path(self):
         graph = get_graph(self.simplices[1], self.fence_subcomplex)
         dist, paths = lazy_dijkstra(graph, self.robots.index(self.entrypoint), len(self.robots))
-        frontier_robots_indices = list(set(sum(self.fence_subcomplex['frontier_simplices'], [])))
+        frontier_robots_indices = list(set(sum(self.fence_subcomplex.frontier_simplices, [])))
         closest_frontier_robot_index = min(frontier_robots_indices, key=lambda d: dist[d])
         self.skeleton_path = paths[closest_frontier_robot_index]
 

@@ -11,7 +11,7 @@ class Plot:
         fig.suptitle('Swarm Simulation')
         ax = fig.add_subplot(111)
         ax.grid()
-        (m_x1, m_y1), (m_x2, m_y2) = controller.map['boundary']
+        (m_x1, m_y1), (m_x2, m_y2) = controller.map.boundary
         ax.update_datalim([[m_x1 - 0.5, m_y1 - 0.5], [m_x2 + 0.5, m_y2 + 0.5]])
         ax.autoscale_view()
         ax.set_xlabel('x')
@@ -25,7 +25,7 @@ class Plot:
                                lw=5))
 
         # draw obstacles
-        for (o_x1, o_y1), (o_x2, o_y2) in controller.map['obstacles']:
+        for (o_x1, o_y1), (o_x2, o_y2) in controller.map.obstacles:
             rect = matplotlib.patches.Rectangle((o_x1, o_y1),
                                                 o_x2 - o_x1, o_y2 - o_y1,
                                                 color='grey')
@@ -55,9 +55,9 @@ class Plot:
             x1, y1 = self.controller.robots[one_simplex[0]]
             x2, y2 = self.controller.robots[one_simplex[1]]
             # TODO: Make the 1 simplex and 2 simplex as tuples so that [0,2] = [2,0]
-            if one_simplex in self.controller.fence_subcomplex['frontier_simplices']:
+            if one_simplex in self.controller.fence_subcomplex.frontier_simplices:
                 self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='blue')[0])
-            elif one_simplex in self.controller.fence_subcomplex['obstacle_simplices']:
+            elif one_simplex in self.controller.fence_subcomplex.obstacle_simplices:
                 self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='red')[0])
             elif one_simplex in skeleton_path_simplices:
                 self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='green')[0])

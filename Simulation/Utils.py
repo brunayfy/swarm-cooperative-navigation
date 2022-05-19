@@ -5,6 +5,23 @@ from math import pi
 
 import numpy as np
 
+from dataclasses import dataclass
+
+@dataclass
+class Simplex:
+    zero_simplices: list[int]
+    one_simplices: list[int]
+    two_simplices: list[int]
+
+@dataclass
+class FenceSubcomplex:
+    obstacle_simplices: list[list[int]]
+    frontier_simplices: list[list[int]]
+
+@dataclass
+class Map:
+    boundary: list[list[float]]
+    obstacles: list[list[list[float]]]
 
 def distance(pos1, pos2):
     (x1, y1) = pos1
@@ -29,10 +46,10 @@ def get_angle(i, j, k):
         return theta_i_j_k - 2 * pi
 
 
-def get_graph(one_simplices, fence_subcomplex):
-    graph = defaultdict(list)
+def get_graph(one_simplices: list[list[int]], fence_subcomplex: FenceSubcomplex) -> defaultdict[list[list[int]]]:
+    graph = defaultdict(list[list[int]])
     for one_simplex in one_simplices:
-        if one_simplex in fence_subcomplex['obstacle_simplices']:
+        if one_simplex in fence_subcomplex.obstacle_simplices:
             graph[one_simplex[1]].append([one_simplex[0], 2])
             graph[one_simplex[0]].append([one_simplex[1], 2])
         else:
@@ -88,7 +105,7 @@ def lazy_dijkstra(graph, root, n):
 
 # ------------------------- get_fence_subcomplex functions  ---------------------------#
 
-def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_position: list,
+def ensure_valid_deploy_position(sim_map: Map, current_position: list[float], deploy_position: list,
                                  obstacle_radius: float = 0.5, margin: float = 0.05):
     """
     Check if the deployment position is:
@@ -98,9 +115,8 @@ def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_p
     """
     cx, cy = current_position
     dx, dy = deploy_position
-    (m_x1, m_y1), (m_x2, m_y2) = sim_map['boundary']
+    (m_x1, m_y1), (m_x2, m_y2) = sim_map.boundary
     is_obstacle = False
-
     # check if new deploy is inside map
     a_den = dx - cx
     a = 0 if a_den == 0 else (dy - cy) / a_den
@@ -131,7 +147,7 @@ def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_p
     a_den = dx - cx
     a = 0 if a_den == 0 else (dy - cy) / a_den
     b = cy - a * cx
-    for (o_x1, o_y1), (o_x2, o_y2) in sim_map['obstacles']:
+    for (o_x1, o_y1), (o_x2, o_y2) in sim_map.obstacles:
         if o_x1 <= dx <= o_x2:
             if o_y1 <= dy <= o_y2:
                 if cx <= o_x1:
@@ -159,7 +175,7 @@ def ensure_valid_deploy_position(sim_map: dict, current_position: list, deploy_p
     return [dx, dy], is_obstacle
 
 
-def is_obstacle_simplex(one_simplex: object, robot_is_obstacle) -> bool:
+def is_obstacle_simplex(one_simplex: list[int], robot_is_obstacle: defaultdict[bool]) -> bool:
     """
     Check if robots {i,j} are an obstacle simplex:
         If robots i and j are in touch with obstacles(consider that there are no robots visible in the direction of
