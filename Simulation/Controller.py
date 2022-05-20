@@ -1,4 +1,3 @@
-import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -9,7 +8,7 @@ from Utils import (ensure_valid_deploy_position,
                    filter_one_simplices_exception,
                    get_deployment_absolute_position, get_deployment_angle,
                    get_graph, get_one_simplex_uncov, is_obstacle_simplex,
-                   lazy_dijkstra, Map, FenceSubcomplex)
+                   lazy_dijkstra, Map, FenceSubcomplex, point_inside_line)
 
 
 class Controller:
@@ -20,16 +19,18 @@ class Controller:
         self.map = Map(config['map']['boundary'], config['map']['obstacles'])
         self.entrypoint = config['map']['entrypoint']
         self.robot_radius = config['robot_radius']
+        # error in measurement of bearings to neighbors, needed so that it doesn't falsely classify 2-Rips complex
+        # with pi/3 angle as obstacle
+        self.beta = config['beta']
 
         self.robots, self.skeleton_path = [], []
-        self.fence_subcomplex = FenceSubcomplex([],[])
+        self.fence_subcomplex = None
         self.simplices = {0: [], 1: [], 2: []}
         self.robot_is_obstacle = defaultdict(bool)
 
         # Deploy first robot, assume entrypoint is a valid position
         self.robots.append(self.entrypoint)
         # Deploy second robot in an angle of pi/3 of the first one TODO: treat cases were there is obstacles
-        # second_robot_deploy_position = get_deployment_absolute_position(self.entrypoint[0], self.entrypoint[1], -math.pi/3)
         second_robot_deploy_position = [self.entrypoint[0] + 0.5, self.entrypoint[1] + 1]
         pos, is_obstacle = ensure_valid_deploy_position(self.map, self.entrypoint, second_robot_deploy_position)
         self.robots.append(pos)
@@ -58,10 +59,13 @@ class Controller:
                 self.simplices[size].append(simplex)
 
         # Separately adding two_simplex that doesn't have obstruction
-        for two_simplex in two_simplex_to_add:
-            for one_simplex in one_simplex_obstructed:
-                if len([x for x in two_simplex if x not in one_simplex]) != 1:
-                    self.simplices[2].append(two_simplex)
+        if one_simplex_obstructed:
+            for two_simplex in two_simplex_to_add:
+                for one_simplex in one_simplex_obstructed:
+                    if len([x for x in two_simplex if x not in one_simplex]) != 1:
+                        self.simplices[2].append(two_simplex)
+        else:
+            self.simplices[2] = two_simplex_to_add
 
     def _check_if_simplex_is_obstructed(self, simplex: list[int]):
         # Check if one-simplices cross an obstacle(robots cannot see each other)
@@ -79,35 +83,37 @@ class Controller:
         for (obs_x1, obs_y1), (obs_x2, obs_y2) in self.map.obstacles:
             if a_den == 0:
                 print("check this case where there is a vertically line(two robots are vertically aligned)!")
-                if obs_x1 <= robot_x1 <= obs_x2 and self._point_inside_line(robot_x1, obs_y1, robot_x1, robot_y1, robot_x2, robot_y2):
+                if obs_x1 <= robot_x1 <= obs_x2 and point_inside_line(robot_x1, obs_y1, robot_x1, robot_y1,
+                                                                           robot_x2, robot_y2):
                     return True
             else:
                 y1 = a * obs_x1 + b
-                if obs_y1 <= y1 <= obs_y2 and self._point_inside_line(obs_x1, y1, robot_x1, robot_y1, robot_x2, robot_y2):
+                if obs_y1 <= y1 <= obs_y2 and point_inside_line(obs_x1, y1, robot_x1, robot_y1, robot_x2,
+                                                                     robot_y2):
                     return True
                 else:
                     y2 = a * obs_x2 + b
-                    if obs_y1 <= y2 <= obs_y2 and self._point_inside_line(obs_x2, y2, robot_x1, robot_y1, robot_x2, robot_y2):
+                    if obs_y1 <= y2 <= obs_y2 and point_inside_line(obs_x2, y2, robot_x1, robot_y1, robot_x2,
+                                                                         robot_y2):
                         return True
                     else:
                         if a == 0:
-                            print("check this case where there is a horizontal line(two robots are horizontally aligned)!")
-                            if obs_y1 <= robot_y1 <= obs_y2 and self._point_inside_line(obs_x1, robot_y1, robot_x1,
-                                                                                        robot_y1, robot_x2, robot_y2):
+                            print(
+                                "check this case where there is a horizontal line(two robots are horizontally aligned)!")
+                            if obs_y1 <= robot_y1 <= obs_y2 and point_inside_line(obs_x1, robot_y1, robot_x1,
+                                                                                       robot_y1, robot_x2, robot_y2):
                                 return True
                         else:
                             x1 = (obs_y1 - b) / a
-                            if obs_x1 <= x1 <= obs_x2 and self._point_inside_line(x1, obs_y1, robot_x1, robot_y1,
-                                                                                  robot_x2, robot_y2):
+                            if obs_x1 <= x1 <= obs_x2 and point_inside_line(x1, obs_y1, robot_x1, robot_y1,
+                                                                                 robot_x2, robot_y2):
                                 return True
                             else:
                                 x2 = (obs_y2 - b) / a
-                                if obs_x1 <= x2 <= obs_x2 and self._point_inside_line(x2, obs_y2, robot_x1, robot_y1,
-                                                                                  robot_x2, robot_y2):
+                                if obs_x1 <= x2 <= obs_x2 and point_inside_line(x2, obs_y2, robot_x1, robot_y1,
+                                                                                     robot_x2, robot_y2):
                                     return True
         return False
-    def _point_inside_line(self, px, py, ax, ay, bx, by):
-        return (ax <= px <= bx and ay <= py <= by ) or (bx <= px <= ax and by <= py <= ay )
 
     def _update_fence_subcomplex(self):
         """
@@ -125,7 +131,7 @@ class Controller:
             uncov = get_one_simplex_uncov(self.robots, one_simplex, self.simplices[2])
             if uncov:
                 theta_i_j_new, theta_j_i_new = get_deployment_angle(obstacle_simplices, self.robots, one_simplex,
-                                                                    normal_one_simplices, uncov)
+                                                                    normal_one_simplices, uncov, self.beta)
                 for theta in theta_i_j_new:
                     self.deployment_positions[i].append(
                         get_deployment_absolute_position(self.robots[i], self.robots[j], theta))

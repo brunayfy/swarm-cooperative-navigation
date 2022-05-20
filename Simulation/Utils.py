@@ -1,11 +1,11 @@
 import heapq
 import math
 from collections import defaultdict
+from dataclasses import dataclass
 from math import pi
 
 import numpy as np
 
-from dataclasses import dataclass
 
 @dataclass
 class Simplex:
@@ -13,15 +13,18 @@ class Simplex:
     one_simplices: list[int]
     two_simplices: list[int]
 
+
 @dataclass
 class FenceSubcomplex:
     obstacle_simplices: list[list[int]]
     frontier_simplices: list[list[int]]
 
+
 @dataclass
 class Map:
     boundary: list[list[float]]
     obstacles: list[list[list[float]]]
+
 
 def distance(pos1, pos2):
     (x1, y1) = pos1
@@ -198,7 +201,7 @@ def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinat
 
 
 def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
-                         one_simplices: list, uncov: list) -> tuple[list[float], list[float]]:
+                         one_simplices: list, uncov: list, beta: float) -> tuple[list[float], list[float]]:
     theta_i_j_new, theta_j_i_new = [], []
     i, j = one_simplex
     for sigma in uncov:
@@ -208,7 +211,7 @@ def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
         else:
             k_i = min([[k, abs(get_angle(robots[i], robots[j], robots[k]))] for k in S_i], key=lambda x: x[1])[0]
             theta_i_j_k_i = get_angle(robots[i], robots[j], robots[k_i])
-            if abs(theta_i_j_k_i) < pi / 3:
+            if abs(theta_i_j_k_i) < pi / 3 - 2 * beta:
                 obstacle_simplices.append([i, k_i])  # TODO: Check this!
             else:
                 theta_i_j_new.append(sigma * min([pi / 3, abs(theta_i_j_k_i / 2)]))
@@ -219,7 +222,7 @@ def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
             k_j = min([[k, abs(get_angle(robots[j], robots[i], robots[k]))] for k in S_j], key=lambda x: x[1])[0]
             theta_j_i_k_j = get_angle(robots[j], robots[i], robots[k_j])
 
-            if abs(theta_j_i_k_j) < pi / 3:
+            if abs(theta_j_i_k_j) < pi / 3 - 2 * beta:
                 obstacle_simplices.append([j, k_j])  # TODO: Check this!
             else:
                 theta_j_i_new.append(-sigma * min([pi / 3, abs(theta_j_i_k_j / 2)]))
@@ -270,6 +273,10 @@ def get_one_simplex_uncov(robots, one_simplex: list, two_simplices: list[list]) 
         return [-1]
     else:
         return [1]
+
+
+def point_inside_line(px, py, ax, ay, bx, by):
+    return (ax <= px <= bx and ay <= py <= by) or (bx <= px <= ax and by <= py <= ay)
 
 
 def filter_one_simplices_exception(one_simplices: list[list]) -> tuple[list[list], list]:
