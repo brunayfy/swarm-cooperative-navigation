@@ -84,34 +84,33 @@ class Controller:
             if a_den == 0:
                 print("check this case where there is a vertically line(two robots are vertically aligned)!")
                 if obs_x1 <= robot_x1 <= obs_x2 and point_inside_line(robot_x1, obs_y1, robot_x1, robot_y1,
-                                                                           robot_x2, robot_y2):
+                                                                      robot_x2, robot_y2):
                     return True
             else:
                 y1 = a * obs_x1 + b
                 if obs_y1 <= y1 <= obs_y2 and point_inside_line(obs_x1, y1, robot_x1, robot_y1, robot_x2,
-                                                                     robot_y2):
+                                                                robot_y2):
                     return True
                 else:
                     y2 = a * obs_x2 + b
                     if obs_y1 <= y2 <= obs_y2 and point_inside_line(obs_x2, y2, robot_x1, robot_y1, robot_x2,
-                                                                         robot_y2):
+                                                                    robot_y2):
                         return True
                     else:
                         if a == 0:
-                            print(
-                                "check this case where there is a horizontal line(two robots are horizontally aligned)!")
+                            print("check this case where there is a horizontal line(two robots horizontally aligned)!")
                             if obs_y1 <= robot_y1 <= obs_y2 and point_inside_line(obs_x1, robot_y1, robot_x1,
-                                                                                       robot_y1, robot_x2, robot_y2):
+                                                                                  robot_y1, robot_x2, robot_y2):
                                 return True
                         else:
                             x1 = (obs_y1 - b) / a
                             if obs_x1 <= x1 <= obs_x2 and point_inside_line(x1, obs_y1, robot_x1, robot_y1,
-                                                                                 robot_x2, robot_y2):
+                                                                            robot_x2, robot_y2):
                                 return True
                             else:
                                 x2 = (obs_y2 - b) / a
                                 if obs_x1 <= x2 <= obs_x2 and point_inside_line(x2, obs_y2, robot_x1, robot_y1,
-                                                                                     robot_x2, robot_y2):
+                                                                                robot_x2, robot_y2):
                                     return True
         return False
 
@@ -144,14 +143,14 @@ class Controller:
                     pass  # Already added simplex to obstacles on get_deployment_angle
                 else:
                     frontier_simplices.append(one_simplex)
-                    frontier_simplices.append([i])
+                    frontier_simplices.append([i])  # TODO: REVIEW THIS, SINGLE ROBOT MAY ALREADY BE IN IS_OBSTACLE
                     frontier_simplices.append([j])
                     # TODO: Check why adding {i} and {j} separately
 
         self.fence_subcomplex = FenceSubcomplex(obstacle_simplices, frontier_simplices)
 
     def _update_skeleton_path(self):
-        graph = get_graph(self.simplices[1], self.fence_subcomplex)
+        graph = get_graph(self.simplices[1], self.fence_subcomplex, self.robot_is_obstacle)
         dist, paths = lazy_dijkstra(graph, self.robots.index(self.entrypoint), len(self.robots))
         frontier_robots_indices = list(set(sum(self.fence_subcomplex.frontier_simplices, [])))
         closest_frontier_robot_index = min(frontier_robots_indices, key=lambda d: dist[d])
@@ -162,37 +161,26 @@ class Controller:
             self.robots.append(self.entrypoint)
             return
 
-        frontier, *follow = self.skeleton_path
-        frontier_pos = self.robots[frontier]
-        frontier_robot_is_obstacle = self.robot_is_obstacle[frontier]
-        current, moved, moved_index = None, None, None
-
-        if self.deployment_positions[frontier]:
-            # Deploying robots on valid points. If there is an obstacle it will calculate a new deployment position
-            # to simulate robot moving to desired position and hitting an obstacle.
-            pos, is_obstacle = ensure_valid_deploy_position(self.map, frontier_pos,
-                                                            self.deployment_positions[frontier][0])
-            self.robots[frontier] = pos
-            if is_obstacle:
-                self.robot_is_obstacle[frontier] = True
-        else:
-            print(
-                "The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration on skeleton "
-                "construction so that it doesn't choose this paths")
-
-        for robot_index in follow:
-            current = self.robots[robot_index]
-            if moved is None:
-                self.robots[robot_index] = frontier_pos
-                self.robot_is_obstacle[robot_index] = frontier_robot_is_obstacle
-            else:
-                self.robots[robot_index] = moved
-                self.robot_is_obstacle[robot_index] = self.robot_is_obstacle[moved_index]
-            moved = current
-            moved_index = robot_index
-
         self.robots.append(self.entrypoint)
-        self.robot_is_obstacle[len(self.robots) - 1] = self.robot_is_obstacle[moved_index]
+        self.skeleton_path.append(len(self.robots) - 1)
+        reversed_skeleton_path = list(reversed(self.skeleton_path))
+        for i, robot in enumerate(reversed_skeleton_path):
+            if i == len(self.skeleton_path) - 1:
+                if self.deployment_positions[robot]:
+                    # Deploying robots on valid points. If there is an obstacle it will calculate a new deployment
+                    # position to simulate robot moving to desired position and hitting an obstacle.
+                    pos, is_obstacle = ensure_valid_deploy_position(self.map, self.robots[robot],
+                                                                    self.deployment_positions[robot][0])
+                    self.robots[robot] = pos
+                    if is_obstacle:
+                        self.robot_is_obstacle[robot] = True
+                else:
+                    print("The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration on "
+                          "skeleton construction so that it doesn't choose this paths")
+            else:
+                next_robot = reversed_skeleton_path[i + 1]
+                self.robots[robot] = self.robots[next_robot]
+                self.robot_is_obstacle[robot] = self.robot_is_obstacle[next_robot]
 
     def is_full_covered(self) -> bool:
         return False
@@ -200,5 +188,7 @@ class Controller:
     def run_iter(self):
         self._push_robot()
         self._update_simplices()
+        if __debug__:  # This plot is partial with fence complex not updated used for testing, use -O to remove debug
+            self.plot.update_plot()
         self._update_fence_subcomplex()
         self._update_skeleton_path()

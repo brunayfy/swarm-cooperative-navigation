@@ -12,7 +12,8 @@ class Plot:
         ax = fig.add_subplot(111)
         ax.grid()
         (m_x1, m_y1), (m_x2, m_y2) = controller.map.boundary
-        ax.update_datalim([[m_x1 - 0.5, m_y1 - 0.5], [m_x2 + 0.5, m_y2 + 0.5]])
+        map_margin = 0.0
+        ax.update_datalim([[m_x1 - map_margin, m_y1 - map_margin], [m_x2 + map_margin, m_y2 + map_margin]])
         ax.autoscale_view()
         ax.set_xlabel('x')
         ax.set_ylabel('y')
@@ -94,4 +95,4 @@ class Plot:
         for i in range(len(self.controller.robots)):
             self.texts.append(plt.text(self.controller.robots[i][0], self.controller.robots[i][1], str(i)))
 
-        plt.pause(1)
+        plt.pause(0.1)

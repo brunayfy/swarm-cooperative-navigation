@@ -1,6 +1,6 @@
 sim_001:
   map:
-     "boundary"   : [[0, 0], [20, 20]]
+     "boundary"   : [[0, 0], [10, 12]]
      "obstacles"  : [[[4, 4], [6, 6]], [[7, 8], [9, 11]]]
      "entrypoint" : [1, 1]
   robot_radius: 1.414213562

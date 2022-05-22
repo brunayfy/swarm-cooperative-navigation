@@ -49,15 +49,16 @@ def get_angle(i, j, k):
         return theta_i_j_k - 2 * pi
 
 
-def get_graph(one_simplices: list[list[int]], fence_subcomplex: FenceSubcomplex) -> defaultdict[list[list[int]]]:
+def get_graph(one_simplices: list[list[int]], fence_subcomplex: FenceSubcomplex, robot_is_obstacle) -> defaultdict[list[list[int]]]:
     graph = defaultdict(list[list[int]])
     for one_simplex in one_simplices:
         if one_simplex in fence_subcomplex.obstacle_simplices:
             graph[one_simplex[1]].append([one_simplex[0], 2])
             graph[one_simplex[0]].append([one_simplex[1], 2])
         else:
-            graph[one_simplex[0]].append([one_simplex[1], 1])
-            graph[one_simplex[1]].append([one_simplex[0], 1])
+            # Note: Adding weight 2 for robots in contact with obstacle as well
+            graph[one_simplex[1]].append([one_simplex[0], 2 if robot_is_obstacle[one_simplex[1]] else 1])
+            graph[one_simplex[0]].append([one_simplex[1], 2 if robot_is_obstacle[one_simplex[0]] else 1])
 
     return graph
 
@@ -109,7 +110,7 @@ def lazy_dijkstra(graph, root, n):
 # ------------------------- get_fence_subcomplex functions  ---------------------------#
 
 def ensure_valid_deploy_position(sim_map: Map, current_position: list[float], deploy_position: list,
-                                 obstacle_radius: float = 0.5, margin: float = 0.05):
+                                 obstacle_radius: float = 0.3, margin: float = 0.05):
     """
     Check if the deployment position is:
         1. valid(it's not inside obstacle or outside map): keep position,
@@ -212,7 +213,7 @@ def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
             k_i = min([[k, abs(get_angle(robots[i], robots[j], robots[k]))] for k in S_i], key=lambda x: x[1])[0]
             theta_i_j_k_i = get_angle(robots[i], robots[j], robots[k_i])
             if abs(theta_i_j_k_i) < pi / 3 - 2 * beta:
-                obstacle_simplices.append([i, k_i])  # TODO: Check this!
+                obstacle_simplices.append([i, k_i])
             else:
                 theta_i_j_new.append(sigma * min([pi / 3, abs(theta_i_j_k_i / 2)]))
 
@@ -223,7 +224,7 @@ def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
             theta_j_i_k_j = get_angle(robots[j], robots[i], robots[k_j])
 
             if abs(theta_j_i_k_j) < pi / 3 - 2 * beta:
-                obstacle_simplices.append([j, k_j])  # TODO: Check this!
+                obstacle_simplices.append([j, k_j])
             else:
                 theta_j_i_new.append(-sigma * min([pi / 3, abs(theta_j_i_k_j / 2)]))
 
