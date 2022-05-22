@@ -277,7 +277,7 @@ def get_one_simplex_uncov(robots, one_simplex: list, two_simplices: list[list]) 
 
 
 def point_inside_line(px, py, ax, ay, bx, by):
-    return (ax <= px <= bx and ay <= py <= by) or (bx <= px <= ax and by <= py <= ay)
+    return (ax <= px <= bx or bx <= px <= ax) and (by <= py <= ay or ay <= py <= by)
 
 
 def filter_one_simplices_exception(one_simplices: list[list]) -> tuple[list[list], list]:

@@ -43,7 +43,7 @@ class Controller:
 
     def _update_simplices(self):
         self.simplices = {0: [], 1: [], 2: []}
-        rips_complex = gudhi.RipsComplex(points=self.robots, max_edge_length=self.robot_radius + 0.1)
+        rips_complex = gudhi.RipsComplex(points=self.robots, max_edge_length=self.robot_radius + 0.05)
         simplex_tree = rips_complex.create_simplex_tree(max_dimension=2)
 
         one_simplex_obstructed = []
