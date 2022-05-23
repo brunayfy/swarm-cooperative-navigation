@@ -39,7 +39,7 @@ class Plot:
         self.robots_obstacle_scatter = ax.scatter([], [], color='red', label='robots in contact with obstacles')
         self.skeleton_scatter = ax.scatter([], [], color='green', label='skeleton path')
         self.controller = controller
-        self.simplices, self.texts = [], []
+        self.simplices, self.texts = [], {}
 
         self.update_plot()
 
@@ -86,13 +86,13 @@ class Plot:
             robot_x.append(self.controller.robots[p][0])
             robot_y.append(self.controller.robots[p][1])
         self.robots_obstacle_scatter.set_offsets(np.c_[robot_x, robot_y])
-
+          
         # plotting robots ids
-        if self.texts:
-            for text in self.texts:
-                text.remove()
-                self.texts = []
-        for i in range(len(self.controller.robots)):
-            self.texts.append(plt.text(self.controller.robots[i][0], self.controller.robots[i][1], str(i)))
-
-        plt.pause(0.1)
+        for r_index in range(len(self.controller.robots)):
+            if r_index not in self.texts:
+                self.texts[r_index] = plt.text(self.controller.robots[r_index][0], self.controller.robots[r_index][1], str(r_index))
+            elif r_index in self.controller.skeleton_path:
+                self.texts[r_index].remove()
+                self.texts[r_index] = plt.text(self.controller.robots[r_index][0], self.controller.robots[r_index][1], str(r_index))
+               
+        plt.pause(0.01)
