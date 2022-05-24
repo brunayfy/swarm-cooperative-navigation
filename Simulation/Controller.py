@@ -1,3 +1,4 @@
+import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -15,7 +16,7 @@ class Controller:
     def __init__(self, config_path: str, sim_id: str) -> None:
         with open(Path(__file__).parent / config_path, 'r') as f:
             config = yaml.safe_load(f.read())[sim_id]
-
+        self.is_full_covered = False
         self.map = Map(config['map']['boundary'], config['map']['obstacles'])
         self.entrypoint = config['map']['entrypoint']
         self.robot_radius = config['robot_radius']
@@ -28,10 +29,11 @@ class Controller:
         self.simplices = {0: [], 1: [], 2: []}
         self.robot_is_obstacle = defaultdict(bool)
 
-        # Deploy first robot, assume entrypoint is a valid position
+        # Deploy first robot, assuming entrypoint is a valid position!
         self.robots.append(self.entrypoint)
-        # Deploy second robot in an angle of pi/3 of the first one TODO: treat cases were there is obstacles
-        second_robot_deploy_position = [self.entrypoint[0] + 0.5, self.entrypoint[1] + 1]
+        # Deploy second robot in an angle of pi/3 of the first one
+        second_robot_deploy_position = [self.entrypoint[0] + self.robot_radius / 2,
+                                        self.entrypoint[1] + math.sin(math.pi / 3) * self.robot_radius]
         pos, is_obstacle = ensure_valid_deploy_position(self.map, self.entrypoint, second_robot_deploy_position)
         self.robots.append(pos)
         if is_obstacle:
@@ -82,7 +84,7 @@ class Controller:
 
         for (obs_x1, obs_y1), (obs_x2, obs_y2) in self.map.obstacles:
             if a_den == 0:
-                print("check this case where there is a vertically line(two robots are vertically aligned)!")
+                # two robots are vertically aligned
                 if obs_x1 <= robot_x1 <= obs_x2 and point_inside_line(robot_x1, obs_y1, robot_x1, robot_y1,
                                                                       robot_x2, robot_y2):
                     return True
@@ -98,7 +100,7 @@ class Controller:
                         return True
                     else:
                         if a == 0:
-                            print("check this case where there is a horizontal line(two robots horizontally aligned)!")
+                            # two robots horizontally aligned
                             if obs_y1 <= robot_y1 <= obs_y2 and point_inside_line(obs_x1, robot_y1, robot_x1,
                                                                                   robot_y1, robot_x2, robot_y2):
                                 return True
@@ -143,9 +145,7 @@ class Controller:
                     pass  # Already added simplex to obstacles on get_deployment_angle
                 else:
                     frontier_simplices.append(one_simplex)
-                    frontier_simplices.append([i])  # TODO: REVIEW THIS, SINGLE ROBOT MAY ALREADY BE IN IS_OBSTACLE
-                    frontier_simplices.append([j])
-                    # TODO: Check why adding {i} and {j} separately
+                    # NOTE: Didn't add {i} and {j} separately as it's not used to calculate skeleton path
 
         self.fence_subcomplex = FenceSubcomplex(obstacle_simplices, frontier_simplices)
 
@@ -153,6 +153,10 @@ class Controller:
         graph = get_graph(self.simplices[1], self.fence_subcomplex, self.robot_is_obstacle)
         dist, paths = lazy_dijkstra(graph, self.robots.index(self.entrypoint), len(self.robots))
         frontier_robots_indices = list(set(sum(self.fence_subcomplex.frontier_simplices, [])))
+        if not frontier_robots_indices:
+            self.is_full_covered = True
+            print("Exploration completed!")
+            return
         closest_frontier_robot_index = min(frontier_robots_indices, key=lambda d: dist[d])
         self.skeleton_path = paths[closest_frontier_robot_index]
 
@@ -181,9 +185,6 @@ class Controller:
                 next_robot = reversed_skeleton_path[i + 1]
                 self.robots[robot] = self.robots[next_robot]
                 self.robot_is_obstacle[robot] = self.robot_is_obstacle[next_robot]
-
-    def is_full_covered(self) -> bool:
-        return False
 
     def run_iter(self):
         self._push_robot()

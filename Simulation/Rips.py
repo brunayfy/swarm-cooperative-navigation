@@ -6,8 +6,7 @@ def main():
     controller = Controller('config.yaml', 'sim_001')
     plot = Plot(controller)
     controller.plot = plot
-
-    while not controller.is_full_covered():
+    while not controller.is_full_covered:
         controller.run_iter()
         plot.update_plot()
 
