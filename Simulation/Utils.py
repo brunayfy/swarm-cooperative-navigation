@@ -36,11 +36,9 @@ def get_angle(i, j, k):
     i_x, i_y = i
     j_x, j_y = j
     k_x, k_y = k
-
     theta_i_j = math.atan2(j_y - i_y, j_x - i_x)
     theta_i_k = math.atan2(k_y - i_y, k_x - i_x)
     theta_i_j_k = theta_i_k - theta_i_j
-
     if theta_i_j_k < -pi:
         return theta_i_j_k + 2 * pi
     elif -pi <= theta_i_j_k < pi:
@@ -49,7 +47,8 @@ def get_angle(i, j, k):
         return theta_i_j_k - 2 * pi
 
 
-def get_graph(one_simplices: list[list[int]], fence_subcomplex: FenceSubcomplex, robot_is_obstacle) -> defaultdict[list[list[int]]]:
+def get_graph(one_simplices: list[list[int]], fence_subcomplex: FenceSubcomplex, robot_is_obstacle) -> \
+        defaultdict[list[list[int]]]:
     graph = defaultdict(list[list[int]])
     for one_simplex in one_simplices:
         if one_simplex in fence_subcomplex.obstacle_simplices:
@@ -57,8 +56,8 @@ def get_graph(one_simplices: list[list[int]], fence_subcomplex: FenceSubcomplex,
             graph[one_simplex[0]].append([one_simplex[1], 2])
         else:
             # Note: Adding weight 2 for robots in contact with obstacle as well
-            graph[one_simplex[1]].append([one_simplex[0], 2 if robot_is_obstacle[one_simplex[1]] else 1])
-            graph[one_simplex[0]].append([one_simplex[1], 2 if robot_is_obstacle[one_simplex[0]] else 1])
+            graph[one_simplex[1]].append([one_simplex[0], 2 if robot_is_obstacle[one_simplex[0]] else 1])
+            graph[one_simplex[0]].append([one_simplex[1], 2 if robot_is_obstacle[one_simplex[1]] else 1])
 
     return graph
 
@@ -112,9 +111,9 @@ def lazy_dijkstra(graph, root, n):
 def ensure_valid_deploy_position(sim_map: Map, current_position: list[float], deploy_position: list,
                                  obstacle_radius: float = 0.3, margin: float = 0.05):
     """
-    Check if the deployment position is:
+    a. Check if the deployment position is:
         1. valid(it's not inside obstacle or outside map): keep position,
-            else move to the closest valid position(-margin)
+            else move to the closest valid position(-margin) - make
         2. is near(obstacle_radius) walls or obstacle: is_obstacle == True
     """
     cx, cy = current_position
@@ -127,22 +126,18 @@ def ensure_valid_deploy_position(sim_map: Map, current_position: list[float], de
     b = cy - a * cx
     if dx <= m_x1:
         dx = m_x1 + margin
-        dy = a * dx + b
         is_obstacle = True
     elif dx >= m_x2 - obstacle_radius:
         dx = m_x2 - margin
-        dy = a * dx + b
         is_obstacle = True
     elif dx <= m_x1 + obstacle_radius or dx >= m_x2 - obstacle_radius:
         is_obstacle = True  # robot near map wall
 
     if dy <= m_y1:
         dy = m_y1 + margin
-        dx = cx if a == 0 else (dy - b) / a
         is_obstacle = True
     elif dy >= m_y2:
         dy = m_y2 - margin
-        dx = cx if a == 0 else (dy - b) / a
         is_obstacle = True
     elif dy <= m_y1 + obstacle_radius or dy >= m_y2 - obstacle_radius:
         is_obstacle = True  # robot near map wall
@@ -156,19 +151,15 @@ def ensure_valid_deploy_position(sim_map: Map, current_position: list[float], de
             if o_y1 <= dy <= o_y2:
                 if cx <= o_x1:
                     dx = o_x1 - margin
-                    dy = a * dx + b
                     is_obstacle = True
                 elif cx >= o_x2:
                     dx = o_x2 + margin
-                    dy = a * dx + b
                     is_obstacle = True
                 if cy <= o_y1:
                     dy = o_y1 - margin
-                    dx = cx if a == 0 else (dy - b) / a
                     is_obstacle = True
                 elif cy >= o_y2:
                     dy = o_y2 + margin
-                    dx = cx if a == 0 else (dy - b) / a
                     is_obstacle = True
             elif o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
                 is_obstacle = True
@@ -187,6 +178,7 @@ def is_obstacle_simplex(one_simplex: list[int], robot_is_obstacle: defaultdict[b
         the expanding direction uncov, them 1-simplex {i,j} is an obstacle simplex.
     """
     i, j = one_simplex
+    # TODO: Calculate the contact angle with the obstacle to know if its on the same side of uncov
     if robot_is_obstacle[i] and robot_is_obstacle[j]:
         return True
     return False
@@ -280,6 +272,39 @@ def point_inside_line(px, py, ax, ay, bx, by):
     return (ax <= px <= bx or bx <= px <= ax) and (by <= py <= ay or ay <= py <= by)
 
 
-def filter_one_simplices_exception(one_simplices: list[list]) -> tuple[list[list], list]:
-    # TODO: To be implemented later
-    return one_simplices, []
+def filter_one_simplices_exception(robots: list, two_simplices: list[list], one_simplices: list[list]) -> tuple[list[list], list]:
+    normal, exception = [], []
+    for one_simplex in one_simplices:
+        for two_simplex in two_simplices:
+            diff = [x for x in two_simplex if x not in one_simplex]
+            if len(diff) == 1:
+                break
+        else:
+            normal.append(one_simplex)
+            continue
+        i, j = one_simplex
+        k = diff[0]
+
+        k_neighbors = []
+        for _one_simplex in one_simplices:
+            diff = [x for x in _one_simplex if x != k]
+            if len(diff) == 1:
+                k_neighbors.append(diff[0])
+
+        theta_k_ij = get_angle(robots[k], robots[i], robots[j])
+        theta_k_ij_sign = np.sign(theta_k_ij)
+        for neighbor in k_neighbors:
+            # If there is a crossing happening between {i,j} and {k,k_neighbor} than the angles will be opposite
+            # which means they are not in the fence.
+            # We have to remove the false positive fences (when uncov !=0, but it is not fence)
+            # This filter could also be applied after finding out the fence subcomplex
+            if (
+                    theta_k_ij_sign == np.sign(get_angle(robots[k], robots[i], robots[neighbor])) and
+                    theta_k_ij_sign == np.sign(get_angle(robots[k], robots[neighbor], robots[j]))
+            ):
+                exception.append(one_simplex)
+                break
+        else:
+            normal.append(one_simplex)
+
+    return normal, exception

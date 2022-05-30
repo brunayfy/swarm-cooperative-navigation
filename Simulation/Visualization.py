@@ -15,6 +15,7 @@ class Plot:
         map_margin = 0.0
         ax.update_datalim([[m_x1 - map_margin, m_y1 - map_margin], [m_x2 + map_margin, m_y2 + map_margin]])
         ax.autoscale_view()
+        ax.axis('equal')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
 
@@ -35,36 +36,25 @@ class Plot:
         ax.legend()
         
         self.ax = ax
-        self.robots_scatter = ax.scatter([], [], color=[1., 0.63647424, 0.33815827, 1.], label='robots')
         self.robots_obstacle_scatter = ax.scatter([], [], color='red', label='robots in contact with obstacles')
         self.skeleton_scatter = ax.scatter([], [], color='green', label='skeleton path')
+        self.robots_scatter = ax.scatter([], [], color=[1., 0.63647424, 0.33815827, 1.], label='robots')
         self.controller = controller
         self.simplices, self.texts = [], {}
 
         self.update_plot()
 
     def update_plot(self):
+        # plotting robots ids
+        for r_index in range(len(self.controller.robots)):
+            if r_index in self.texts:
+                self.texts[r_index].remove()
+            self.texts[r_index] = plt.text(self.controller.robots[r_index][0], self.controller.robots[r_index][1], str(r_index))
+
         # plotting the one-simplices edges
         skeleton_path_simplices = [[p1, p2] for p1, p2 in
                                    zip(self.controller.skeleton_path[:-1], self.controller.skeleton_path[1:])] \
                                     if len(self.controller.skeleton_path) > 1 else []
-        if self.simplices:
-            for line in self.simplices:
-                line.remove()
-            self.simplices = []
-        for one_simplex in self.controller.simplices[1]:
-            x1, y1 = self.controller.robots[one_simplex[0]]
-            x2, y2 = self.controller.robots[one_simplex[1]]
-            # TODO: Make the 1 simplex and 2 simplex as tuples so that [0,2] = [2,0]
-            if one_simplex in self.controller.fence_subcomplex.frontier_simplices:
-                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='blue')[0])
-            elif one_simplex in self.controller.fence_subcomplex.obstacle_simplices:
-                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='red')[0])
-            elif one_simplex in skeleton_path_simplices:
-                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='green')[0])
-            else:
-                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='orange')[0])
-
         # plotting robots
         robot_x, robot_y = [], []
         for i, (x, y) in enumerate(self.controller.robots):
@@ -86,13 +76,31 @@ class Plot:
             robot_x.append(self.controller.robots[p][0])
             robot_y.append(self.controller.robots[p][1])
         self.robots_obstacle_scatter.set_offsets(np.c_[robot_x, robot_y])
-          
-        # plotting robots ids
-        for r_index in range(len(self.controller.robots)):
-            if r_index not in self.texts:
-                self.texts[r_index] = plt.text(self.controller.robots[r_index][0], self.controller.robots[r_index][1], str(r_index))
-            elif r_index in self.controller.skeleton_path:
-                self.texts[r_index].remove()
-                self.texts[r_index] = plt.text(self.controller.robots[r_index][0], self.controller.robots[r_index][1], str(r_index))
-               
+
+        if self.simplices:
+            for line in self.simplices:
+                line.remove()
+            self.simplices = []
+
+        for exception_simplex in self.controller.exception_one_simplices:
+            x1, y1 = self.controller.robots[exception_simplex[0]]
+            x2, y2 = self.controller.robots[exception_simplex[1]]
+            if exception_simplex in skeleton_path_simplices:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='green')[0])
+            else:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='yellow')[0])
+
+        for one_simplex in self.controller.normal_one_simplices:
+            x1, y1 = self.controller.robots[one_simplex[0]]
+            x2, y2 = self.controller.robots[one_simplex[1]]
+            # TODO: Make the 1 simplex and 2 simplex as tuples so that [0,2] = [2,0]
+            if one_simplex in self.controller.fence_subcomplex.frontier_simplices:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='blue')[0])
+            elif one_simplex in self.controller.fence_subcomplex.obstacle_simplices:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='red')[0])
+            elif one_simplex in skeleton_path_simplices:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='green')[0])
+            else:
+                self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='orange')[0])
+
         plt.pause(0.01)

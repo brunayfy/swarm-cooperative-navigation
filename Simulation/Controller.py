@@ -27,6 +27,8 @@ class Controller:
         self.robots, self.skeleton_path = [], []
         self.fence_subcomplex = None
         self.simplices = {0: [], 1: [], 2: []}
+        self.normal_one_simplices, self.exception_one_simplices = [],[]
+
         self.robot_is_obstacle = defaultdict(bool)
 
         # Deploy first robot, assuming entrypoint is a valid position!
@@ -126,25 +128,37 @@ class Controller:
         obstacle_simplices, frontier_simplices = [], []
         self.deployment_positions = defaultdict(list)
 
-        normal_one_simplices, exception_one_simplices = filter_one_simplices_exception(self.simplices[1])
+        normal_one_simplices, exception_one_simplices = filter_one_simplices_exception(self.robots, self.simplices[2], self.simplices[1])
+        self.normal_one_simplices = normal_one_simplices
+        self.exception_one_simplices = exception_one_simplices
+
         for one_simplex in normal_one_simplices:
             i, j = one_simplex
             uncov = get_one_simplex_uncov(self.robots, one_simplex, self.simplices[2])
             if uncov:
                 theta_i_j_new, theta_j_i_new = get_deployment_angle(obstacle_simplices, self.robots, one_simplex,
                                                                     normal_one_simplices, uncov, self.beta)
-                for theta in theta_i_j_new:
-                    self.deployment_positions[i].append(
-                        get_deployment_absolute_position(self.robots[i], self.robots[j], theta))
-                for theta in theta_j_i_new:
-                    self.deployment_positions[j].append(
-                        get_deployment_absolute_position(self.robots[j], self.robots[i], theta))
+
                 if is_obstacle_simplex(one_simplex, self.robot_is_obstacle):
                     obstacle_simplices.append(one_simplex)
                 elif one_simplex in obstacle_simplices:
                     pass  # Already added simplex to obstacles on get_deployment_angle
                 else:
                     frontier_simplices.append(one_simplex)
+
+                    # Only appending deployment positions for frontier robots
+                    for theta in theta_i_j_new:
+                        pos = get_deployment_absolute_position(self.robots[i], self.robots[j], theta)
+                        self.deployment_positions[i].append(pos)
+                        self.deployment_positions[j].append(pos)
+
+                    # May be used when doing decentralized processing
+                    # for theta in theta_i_j_new:
+                    #     self.deployment_positions[i].append(
+                    #         get_deployment_absolute_position(self.robots[i], self.robots[j], theta))
+                    # for theta in theta_j_i_new:
+                    #     self.deployment_positions[j].append(
+                    #         get_deployment_absolute_position(self.robots[j], self.robots[i], theta))
                     # NOTE: Didn't add {i} and {j} separately as it's not used to calculate skeleton path
 
         self.fence_subcomplex = FenceSubcomplex(obstacle_simplices, frontier_simplices)
@@ -158,7 +172,10 @@ class Controller:
             print("Exploration completed!")
             return
         closest_frontier_robot_index = min(frontier_robots_indices, key=lambda d: dist[d])
+        a = paths[closest_frontier_robot_index]
+        #TODO: check a === [5,8,9] it forms a simplex where it crosses another
         self.skeleton_path = paths[closest_frontier_robot_index]
+        print('bla')
 
     def _push_robot(self):
         if not self.skeleton_path:
@@ -189,7 +206,7 @@ class Controller:
     def run_iter(self):
         self._push_robot()
         self._update_simplices()
-        if __debug__:  # This plot is partial with fence complex not updated used for testing, use -O to remove debug
-            self.plot.update_plot()
+        # if __debug__:  # This plot is partial with fence complex not updated used for testing, use -O to remove debug
+            # self.plot.update_plot()
         self._update_fence_subcomplex()
         self._update_skeleton_path()
