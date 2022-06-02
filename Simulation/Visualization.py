@@ -103,4 +103,4 @@ class Plot:
             else:
                 self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='orange')[0])
 
-        plt.pause(0.01)
+        plt.pause(1)

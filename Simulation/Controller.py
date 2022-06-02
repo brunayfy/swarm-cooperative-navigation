@@ -5,11 +5,12 @@ from pathlib import Path
 import gudhi
 import yaml
 
-from Utils import (ensure_valid_deploy_position,
+from Utils import (FenceSubcomplex, Map, distance,
+                   ensure_valid_deploy_position,
                    filter_one_simplices_exception,
                    get_deployment_absolute_position, get_deployment_angle,
-                   get_graph, get_one_simplex_uncov, is_obstacle_simplex,
-                   lazy_dijkstra, Map, FenceSubcomplex, point_inside_line)
+                   get_graph, get_one_simplex_uncov, get_pair_combinations,
+                   is_obstacle_simplex, lazy_dijkstra, point_inside_line)
 
 
 class Controller:
@@ -27,7 +28,7 @@ class Controller:
         self.robots, self.skeleton_path = [], []
         self.fence_subcomplex = None
         self.simplices = {0: [], 1: [], 2: []}
-        self.normal_one_simplices, self.exception_one_simplices = [],[]
+        self.normal_one_simplices, self.exception_one_simplices = [], []
 
         self.robot_is_obstacle = defaultdict(bool)
 
@@ -46,6 +47,11 @@ class Controller:
         self._update_skeleton_path()
 
     def _update_simplices(self):
+        def _get_angle(coord1: list[float, float], coord2: list[float, float]):
+            x1, y1 = coord1
+            x2, y2 = coord2
+            return math.atan2(y2 - y1, x2 - x1)
+        
         self.simplices = {0: [], 1: [], 2: []}
         rips_complex = gudhi.RipsComplex(points=self.robots, max_edge_length=self.robot_radius + 0.05)
         simplex_tree = rips_complex.create_simplex_tree(max_dimension=2)
@@ -53,9 +59,25 @@ class Controller:
         one_simplex_obstructed = []
         two_simplex_to_add = []
 
+        one_simplices = [simplex for simplex, _ in simplex_tree.get_filtration() if len(simplex) - 1 == 1]
+        neighboors = defaultdict(dict)
+        for i, j in one_simplices:
+            neighboors[i][j] = {
+                'angle'     : _get_angle(self.robots[i], self.robots[j]),
+                'overlap'   : False
+            }
+        
+        for i, i_neighboors in neighboors.items():
+            for n1, n2 in get_pair_combinations(list(i_neighboors.keys())):
+                if neighboors[i][n1]['angle'] == neighboors[i][n2]['angle']:
+                    if distance(self.robots[i], self.robots[n1]) > distance(self.robots[i], self.robots[n2]):
+                        neighboors[i][n1]['overlap'] = True
+                    else:
+                        neighboors[i][n2]['overlap'] = True
+
         for simplex, _ in simplex_tree.get_filtration():
             size = len(simplex) - 1
-            if size == 1 and self._check_if_simplex_is_obstructed(simplex):
+            if size == 1 and self._check_if_simplex_is_obstructed(simplex, neighboors):
                 one_simplex_obstructed.append(simplex)
             elif size == 2:
                 two_simplex_to_add.append(simplex)
@@ -71,7 +93,12 @@ class Controller:
         else:
             self.simplices[2] = two_simplex_to_add
 
-    def _check_if_simplex_is_obstructed(self, simplex: list[int]):
+    def _check_if_simplex_is_obstructed(self, simplex: list[int], neighboors: list):
+        # Check if one-simplices overlap
+        i, j = simplex
+        if neighboors[i][j]['overlap'] == True:
+            return True
+        
         # Check if one-simplices cross an obstacle(robots cannot see each other)
         robot_1, robot_2 = simplex
 
@@ -175,7 +202,6 @@ class Controller:
         a = paths[closest_frontier_robot_index]
         #TODO: check a === [5,8,9] it forms a simplex where it crosses another
         self.skeleton_path = paths[closest_frontier_robot_index]
-        print('bla')
 
     def _push_robot(self):
         if not self.skeleton_path:

@@ -26,6 +26,14 @@ class Map:
     obstacles: list[list[list[float]]]
 
 
+def get_pair_combinations(list_: list) -> list:
+    combinations = []
+    for i, e_1 in enumerate(list_):
+        for e_2 in list_[i + 1 :]:
+            combinations.append([e_1, e_2])
+    
+    return combinations
+
 def distance(pos1, pos2):
     (x1, y1) = pos1
     (x2, y2) = pos2
