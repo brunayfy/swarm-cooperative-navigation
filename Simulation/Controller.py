@@ -66,10 +66,17 @@ class Controller:
                 'angle'     : _get_angle(self.robots[i], self.robots[j]),
                 'overlap'   : False
             }
-        
+            neighboors[j][i] = {
+                'angle'     : _get_angle(self.robots[j], self.robots[i]),
+                'overlap'   : False
+            }
+
+        # Check if one-simplices overlap (if 3 robots are aligned the middle one is acting as an obstacle so that the ones on the ends can't see each other)
+        # TODO: Add a robot radius of overlap because robot is not a dot.
+        overlap_angle = 0.1
         for i, i_neighboors in neighboors.items():
             for n1, n2 in get_pair_combinations(list(i_neighboors.keys())):
-                if neighboors[i][n1]['angle'] == neighboors[i][n2]['angle']:
+                if abs(neighboors[i][n1]['angle'] - neighboors[i][n2]['angle']) <= overlap_angle:
                     if distance(self.robots[i], self.robots[n1]) > distance(self.robots[i], self.robots[n2]):
                         neighboors[i][n1]['overlap'] = True
                     else:
@@ -88,8 +95,10 @@ class Controller:
         if one_simplex_obstructed:
             for two_simplex in two_simplex_to_add:
                 for one_simplex in one_simplex_obstructed:
-                    if len([x for x in two_simplex if x not in one_simplex]) != 1:
-                        self.simplices[2].append(two_simplex)
+                    if len([x for x in two_simplex if x in one_simplex]) == 2:
+                        break
+                else:
+                    self.simplices[2].append(two_simplex)
         else:
             self.simplices[2] = two_simplex_to_add
 
@@ -175,34 +184,26 @@ class Controller:
 
                     # Only appending deployment positions for frontier robots
                     for theta in theta_i_j_new:
-                        pos = get_deployment_absolute_position(self.robots[i], self.robots[j], theta)
-                        self.deployment_positions[i].append(pos)
-                        self.deployment_positions[j].append(pos)
-
-                    # May be used when doing decentralized processing
-                    # for theta in theta_i_j_new:
-                    #     self.deployment_positions[i].append(
-                    #         get_deployment_absolute_position(self.robots[i], self.robots[j], theta))
-                    # for theta in theta_j_i_new:
-                    #     self.deployment_positions[j].append(
-                    #         get_deployment_absolute_position(self.robots[j], self.robots[i], theta))
-                    # NOTE: Didn't add {i} and {j} separately as it's not used to calculate skeleton path
+                        self.deployment_positions[i].append(
+                            get_deployment_absolute_position(self.robots[i], self.robots[j], theta))
+                    for theta in theta_j_i_new:
+                        self.deployment_positions[j].append(
+                            get_deployment_absolute_position(self.robots[j], self.robots[i], theta))
 
         self.fence_subcomplex = FenceSubcomplex(obstacle_simplices, frontier_simplices)
 
     def _update_skeleton_path(self):
-        graph = get_graph(self.simplices[1], self.fence_subcomplex, self.robot_is_obstacle)
+        graph = get_graph(self.normal_one_simplices, self.fence_subcomplex, self.robot_is_obstacle)
         dist, paths = lazy_dijkstra(graph, self.robots.index(self.entrypoint), len(self.robots))
         frontier_robots_indices = list(set(sum(self.fence_subcomplex.frontier_simplices, [])))
         if not frontier_robots_indices:
             self.is_full_covered = True
             print("Exploration completed!")
             return
+            
         closest_frontier_robot_index = min(frontier_robots_indices, key=lambda d: dist[d])
-        a = paths[closest_frontier_robot_index]
-        #TODO: check a === [5,8,9] it forms a simplex where it crosses another
         self.skeleton_path = paths[closest_frontier_robot_index]
-
+        
     def _push_robot(self):
         if not self.skeleton_path:
             self.robots.append(self.entrypoint)
@@ -232,7 +233,5 @@ class Controller:
     def run_iter(self):
         self._push_robot()
         self._update_simplices()
-        # if __debug__:  # This plot is partial with fence complex not updated used for testing, use -O to remove debug
-            # self.plot.update_plot()
         self._update_fence_subcomplex()
         self._update_skeleton_path()
