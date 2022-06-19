@@ -1,6 +1,7 @@
 import heapq
 import math
 from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from math import pi
 
@@ -175,6 +176,8 @@ def ensure_valid_deploy_position(sim_map: Map, current_position: list[float], de
                 o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
             is_obstacle = True  # robot near obstacle
 
+    # check if 
+
     return [dx, dy], is_obstacle
 
 
@@ -212,7 +215,7 @@ def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
         else:
             k_i = min([[k, abs(get_angle(robots[i], robots[j], robots[k]))] for k in S_i], key=lambda x: x[1])[0]
             theta_i_j_k_i = get_angle(robots[i], robots[j], robots[k_i])
-            if abs(theta_i_j_k_i) < pi / 3 - 2 * beta:
+            if abs(theta_i_j_k_i) < pi / 3 - 2 * beta and sorted([j,k_i]) in one_simplices:
                 obstacle_simplices.append([i, k_i])
             else:
                 theta_i_j_new.append(sigma * min([pi / 3, abs(theta_i_j_k_i / 2)]))
@@ -223,8 +226,9 @@ def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
             k_j = min([[k, abs(get_angle(robots[j], robots[i], robots[k]))] for k in S_j], key=lambda x: x[1])[0]
             theta_j_i_k_j = get_angle(robots[j], robots[i], robots[k_j])
 
-            if abs(theta_j_i_k_j) < pi / 3 - 2 * beta:
+            if abs(theta_j_i_k_j) < pi / 3 - 2 * beta and sorted([i,k_j]) in one_simplices:
                 obstacle_simplices.append([j, k_j])
+
             else:
                 theta_j_i_new.append(-sigma * min([pi / 3, abs(theta_j_i_k_j / 2)]))
 
@@ -280,9 +284,32 @@ def point_inside_line(px, py, ax, ay, bx, by):
     return (ax <= px <= bx or bx <= px <= ax) and (by <= py <= ay or ay <= py <= by)
 
 
+def find_robot_neighbors(robot:int, one_simplices: list[list[int]]):
+    k_neighbors = []
+    for _one_simplex in one_simplices:
+        diff = [x for x in _one_simplex if x != robot]
+        if len(diff) == 1:
+            k_neighbors.append(diff[0])
+    return k_neighbors
+
+def remove_one_simplex(one_simplex, two_simplices):
+    two_simplices_without_exception = []
+    for two_simplex in two_simplices:
+        diff = [x for x in one_simplex if x in two_simplex]
+        if len(diff) != 2:
+            two_simplices_without_exception.append(two_simplex)
+    return two_simplices_without_exception
+
 def filter_one_simplices_exception(robots: list, two_simplices: list[list], one_simplices: list[list]) -> tuple[list[list], list]:
+    # We have to remove the false positive fences (when uncov !=0, but it is not fence)
+    # This filter could also be applied after finding out the fence subcomplex
     normal, exception = [], []
-    for one_simplex in one_simplices:
+    one_simplices = deepcopy(one_simplices)
+    two_simplices = deepcopy(two_simplices)
+    for one_simplex in deepcopy(one_simplices):
+        if one_simplex in exception:
+            continue
+
         for two_simplex in two_simplices:
             diff = [x for x in two_simplex if x not in one_simplex]
             if len(diff) == 1:
@@ -291,28 +318,36 @@ def filter_one_simplices_exception(robots: list, two_simplices: list[list], one_
             normal.append(one_simplex)
             continue
         i, j = one_simplex
+        # Taking first neighbor to help find if there is an exception. Maybe should analyze more neighbors if no exception is found
         k = diff[0]
-
-        k_neighbors = []
-        for _one_simplex in one_simplices:
-            diff = [x for x in _one_simplex if x != k]
-            if len(diff) == 1:
-                k_neighbors.append(diff[0])
+        k_neighbors = [x for x in find_robot_neighbors(k, one_simplices) if x!= i and x!=j]
 
         theta_k_ij = get_angle(robots[k], robots[i], robots[j])
         theta_k_ij_sign = np.sign(theta_k_ij)
+        possible_exceptions = []
         for neighbor in k_neighbors:
-            # If there is a crossing happening between {i,j} and {k,k_neighbor} than the angles will be opposite
-            # which means they are not in the fence.
-            # We have to remove the false positive fences (when uncov !=0, but it is not fence)
-            # This filter could also be applied after finding out the fence subcomplex
+            # If there is a crossing happening between {i,j} and {k,k_neighbor} than the sum of angles will be of the same sign
+            # which means they are not supposed to be in the fence subcomplex.
             if (
                     theta_k_ij_sign == np.sign(get_angle(robots[k], robots[i], robots[neighbor])) and
-                    theta_k_ij_sign == np.sign(get_angle(robots[k], robots[neighbor], robots[j]))
+                    theta_k_ij_sign == np.sign(get_angle(robots[k], robots[neighbor], robots[j])) and
+                    # This check is to see if the two simplex being analized is inside smaller two simplicex. If it is the neighbor and k will be on the same side of the edge, meaning that they dont cross the edge. 
+                    np.sign(get_angle(robots[i], robots[j], robots[k])) != np.sign(get_angle(robots[i], robots[j], robots[neighbor]))
             ):
-                exception.append(one_simplex)
-                break
-        else:
+                # TODO: Optional improvement, compare the one_simplex to the neighbor simplex it is overlapping. Add to the exeption the biggest edge(the one_simplex were the robots are farthest away)
+                possible_exceptions.append(sorted([k, neighbor]))
+        
+        if possible_exceptions == []:
             normal.append(one_simplex)
+        else:
+            possible_exceptions.append(one_simplex)
+            higher_distance_exception = max(possible_exceptions, key=lambda x: distance(robots[x[0]], robots[x[1]]))
+            if higher_distance_exception != one_simplex:
+                normal.append(one_simplex)
+            if higher_distance_exception in normal:
+                normal.remove(higher_distance_exception)
+            exception.append(higher_distance_exception)
+            one_simplices.remove(higher_distance_exception)
+            two_simplices = remove_one_simplex(higher_distance_exception, two_simplices)
 
     return normal, exception
