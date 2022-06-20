@@ -1,5 +1,5 @@
 # 
-# sigma: if the distance from a determined deploy position to the current position is lesser than sigma, then _push_robot won't make a push and will mark the robot as obstacle
+# sigma: if the distance from a determined deploy position to the current position is lesser than sigma, then _push_robot won't make a push and will mark the robot as obstacl1
 #
 
 sim_001:
@@ -8,7 +8,7 @@ sim_001:
      "obstacles"  : []
      "entrypoint" : [1, 1]
   robot_radius: 4.242640687
-  sigma: 0.5
+  sigma: 0.1
   beta: 0.02
 
 sim_002:
@@ -17,7 +17,7 @@ sim_002:
      "obstacles"  : [[[1,6],[3,8]],[[4, 4], [6, 6]], [[7, 8], [9, 11]]]
      "entrypoint" : [1, 1]
   robot_radius: 1.414213562
-  sigma: 0.5
+  sigma: 0.1
   beta: 0.02
 
 sim_003:
@@ -26,7 +26,7 @@ sim_003:
      "obstacles"  : [[[14,0], [15,10]], [[0,15], [10,16]]]
      "entrypoint" : [28, 28]
   robot_radius: 4
-  sigma: 0.5
+  sigma: 0.1
   beta: 0.02
 
 sim_004:
@@ -35,5 +35,5 @@ sim_004:
      "obstacles"  : [[[6,0], [7,15]], [[22,0], [23,15]]]
      "entrypoint" : [15, 1]
   robot_radius: 4
-  sigma: 0.5
+  sigma: 0.1
   beta: 0.02

@@ -3,7 +3,7 @@ from Visualization import Plot
 
 
 def main(): 
-    controller = Controller('config.yaml', 'sim_004')
+    controller = Controller('config.yaml', 'sim_002')
     plot = Plot(controller)
     controller.plot = plot
     while not controller.is_full_covered:

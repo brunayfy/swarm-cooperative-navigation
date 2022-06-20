@@ -59,14 +59,15 @@ def get_angle(i, j, k):
 def get_graph(one_simplices: list[list[int]], fence_subcomplex: FenceSubcomplex, robot_is_obstacle) -> \
         defaultdict[list[list[int]]]:
     graph = defaultdict(list[list[int]])
+    obstacle_weight = 4
     for one_simplex in one_simplices:
         if one_simplex in fence_subcomplex.obstacle_simplices:
-            graph[one_simplex[1]].append([one_simplex[0], 4])
-            graph[one_simplex[0]].append([one_simplex[1], 4])
+            graph[one_simplex[1]].append([one_simplex[0], obstacle_weight])
+            graph[one_simplex[0]].append([one_simplex[1], obstacle_weight])
         else:
-            # Note: Adding weight 4 for robots in contact with obstacle as well
-            graph[one_simplex[1]].append([one_simplex[0], 4 if robot_is_obstacle[one_simplex[0]] else 1])
-            graph[one_simplex[0]].append([one_simplex[1], 4 if robot_is_obstacle[one_simplex[1]] else 1])
+            # Note: Adding weight 'obstacle_weight' for robots in contact with obstacle as well
+            graph[one_simplex[1]].append([one_simplex[0], obstacle_weight if robot_is_obstacle[one_simplex[0]] else 1])
+            graph[one_simplex[0]].append([one_simplex[1], obstacle_weight if robot_is_obstacle[one_simplex[1]] else 1])
 
     return graph
 
