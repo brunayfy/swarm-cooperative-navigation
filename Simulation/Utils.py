@@ -218,7 +218,6 @@ def ensure_valid_deploy_position(
                 elif dy >= o_y2:
                     dy = o_y1 - margin
     
-        print(distance(current_position, [dx, dy]))
         if distance(current_position, [dx, dy]) > sigma:
             return [dx, dy], is_obstacle
     else:
@@ -344,27 +343,26 @@ def remove_one_simplex(one_simplex, two_simplices):
             two_simplices_without_exception.append(two_simplex)
     return two_simplices_without_exception
 
-def filter_one_simplices_exception(robots: list, two_simplices: list[list], one_simplices: list[list]) -> tuple[list[list], list]:
+def filter_exceptions(robots: list, simplices: dict) -> tuple[list, list]:
     # We have to remove the false positive fences (when uncov !=0, but it is not fence)
     # This filter could also be applied after finding out the fence subcomplex
-    normal, exception = [], []
-    one_simplices = deepcopy(one_simplices)
-    two_simplices = deepcopy(two_simplices)
-    for one_simplex in deepcopy(one_simplices):
+    normal = {1: deepcopy(simplices[1]), 2: deepcopy(simplices[2])}
+    exception = []
+    for one_simplex in deepcopy(simplices[1]):
         if one_simplex in exception:
             continue
 
-        for two_simplex in two_simplices:
+        for two_simplex in normal[2]:
             diff = [x for x in two_simplex if x not in one_simplex]
             if len(diff) == 1:
                 break
         else:
-            normal.append(one_simplex)
             continue
+
         i, j = one_simplex
         # Taking first neighbor to help find if there is an exception. Maybe should analyze more neighbors if no exception is found
         k = diff[0]
-        k_neighbors = [x for x in find_robot_neighbors(k, one_simplices) if x!= i and x!=j]
+        k_neighbors = [x for x in find_robot_neighbors(k, normal[1]) if x!= i and x!=j]
 
         theta_k_ij = get_angle(robots[k], robots[i], robots[j])
         theta_k_ij_sign = np.sign(theta_k_ij)
@@ -381,17 +379,12 @@ def filter_one_simplices_exception(robots: list, two_simplices: list[list], one_
                 # TODO: Optional improvement, compare the one_simplex to the neighbor simplex it is overlapping. Add to the exeption the biggest edge(the one_simplex were the robots are farthest away)
                 possible_exceptions.append(sorted([k, neighbor]))
         
-        if possible_exceptions == []:
-            normal.append(one_simplex)
-        else:
+        if possible_exceptions != []:
             possible_exceptions.append(one_simplex)
             higher_distance_exception = max(possible_exceptions, key=lambda x: distance(robots[x[0]], robots[x[1]]))
-            if higher_distance_exception != one_simplex:
-                normal.append(one_simplex)
-            if higher_distance_exception in normal:
-                normal.remove(higher_distance_exception)
+            if higher_distance_exception in normal[1]:
+                normal[1].remove(higher_distance_exception)
             exception.append(higher_distance_exception)
-            one_simplices.remove(higher_distance_exception)
-            two_simplices = remove_one_simplex(higher_distance_exception, two_simplices)
+            normal[2] = remove_one_simplex(higher_distance_exception, normal[2])
 
-    return normal, exception
+    return exception, normal[1], normal[2]

@@ -1,14 +1,12 @@
 import math
 from collections import defaultdict
-from multiprocessing.sharedctypes import Value
 from pathlib import Path
 
 import gudhi
 import yaml
 
 from Utils import (FenceSubcomplex, Map, distance,
-                   ensure_valid_deploy_position,
-                   filter_one_simplices_exception,
+                   ensure_valid_deploy_position, filter_exceptions,
                    get_deployment_absolute_position, get_deployment_angle,
                    get_graph, get_one_simplex_uncov, get_pair_combinations,
                    is_obstacle_simplex, lazy_dijkstra, point_inside_line)
@@ -30,9 +28,6 @@ class Controller:
 
         self.robots, self.skeleton_path = [], []
         self.fence_subcomplex = None
-        self.simplices = {0: [], 1: [], 2: []}
-        self.normal_one_simplices, self.exception_one_simplices = [], []
-
         self.robot_is_obstacle = defaultdict(bool)
 
         # Deploy first robot, assuming entrypoint is a valid position!
@@ -166,15 +161,16 @@ class Controller:
         """
         obstacle_simplices, frontier_simplices = [], []
         self.deployment_positions = defaultdict(list)
-
-        normal_one_simplices, exception_one_simplices = filter_one_simplices_exception(self.robots, self.simplices[2], self.simplices[1])
-        self.normal_one_simplices = normal_one_simplices
-        self.exception_one_simplices = exception_one_simplices
-
-        for one_simplex in normal_one_simplices:
+        self.exception_one_simplices = []
+        possible_exception_one_simplices, normal_one_simplices, normal_two_simplices = filter_exceptions(self.robots, self.simplices)
+        for one_simplex in self.simplices[1]:
             i, j = one_simplex
-            uncov = get_one_simplex_uncov(self.robots, one_simplex, self.simplices[2])
+            uncov = get_one_simplex_uncov(self.robots, one_simplex, normal_two_simplices)
             if uncov:
+                if one_simplex in possible_exception_one_simplices:
+                    self.exception_one_simplices.append(one_simplex)
+                    continue
+
                 theta_i_j_new, theta_j_i_new = get_deployment_angle(obstacle_simplices, self.robots, one_simplex,
                                                                     normal_one_simplices, uncov, self.beta)
 
@@ -196,7 +192,7 @@ class Controller:
         self.fence_subcomplex = FenceSubcomplex(obstacle_simplices, frontier_simplices)
 
     def _update_skeleton_path(self):
-        graph = get_graph(self.normal_one_simplices, self.fence_subcomplex, self.robot_is_obstacle)
+        graph = get_graph(self.simplices[1], self.fence_subcomplex, self.robot_is_obstacle)
         dist, paths = lazy_dijkstra(graph, self.robots.index(self.entrypoint), len(self.robots))
         frontier_robots_indices = list(set(sum(self.fence_subcomplex.frontier_simplices, [])))
         if not frontier_robots_indices:

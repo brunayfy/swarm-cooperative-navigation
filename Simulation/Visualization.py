@@ -88,7 +88,10 @@ class Plot:
             else:
                 self.simplices.append(self.ax.plot([x1, x2], [y1, y2], color='yellow')[0])
 
-        for one_simplex in self.controller.normal_one_simplices:
+        for one_simplex in self.controller.simplices[1]:
+            if one_simplex in self.controller.exception_one_simplices:
+                continue
+            
             x1, y1 = self.controller.robots[one_simplex[0]]
             x2, y2 = self.controller.robots[one_simplex[1]]
             # TODO: Make the 1 simplex and 2 simplex as tuples so that [0,2] = [2,0]
