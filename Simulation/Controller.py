@@ -1,5 +1,6 @@
 import math
 from collections import defaultdict
+from multiprocessing.sharedctypes import Value
 from pathlib import Path
 
 import gudhi
@@ -21,6 +22,8 @@ class Controller:
         self.map = Map(config['map']['boundary'], config['map']['obstacles'])
         self.entrypoint = config['map']['entrypoint']
         self.robot_radius = config['robot_radius']
+        self.sigma = config['sigma']
+
         # error in measurement of bearings to neighbors, needed so that it doesn't falsely classify 2-Rips complex
         # with pi/3 angle as obstacle
         self.beta = config['beta']
@@ -35,9 +38,9 @@ class Controller:
         # Deploy first robot, assuming entrypoint is a valid position!
         self.robots.append(self.entrypoint)
         # Deploy second robot in an angle of pi/3 of the first one
-        second_robot_deploy_position = [self.entrypoint[0] + self.robot_radius / 2,
-                                        self.entrypoint[1] + math.sin(math.pi / 3) * self.robot_radius]
-        pos, is_obstacle = ensure_valid_deploy_position(self.map, self.entrypoint, second_robot_deploy_position)
+        second_robot_deploy_position = [[self.entrypoint[0] + self.robot_radius / 2,
+                                        self.entrypoint[1] + math.sin(math.pi / 3) * self.robot_radius]]
+        pos, is_obstacle = ensure_valid_deploy_position(self.map, self.entrypoint, second_robot_deploy_position, self.sigma)
         self.robots.append(pos)
         if is_obstacle:
             self.robot_is_obstacle[1] = True
@@ -200,38 +203,42 @@ class Controller:
             self.is_full_covered = True
             print("Exploration completed!")
             return
-            
-        closest_frontier_robot_index = min(frontier_robots_indices, key=lambda d: dist[d])
-        self.skeleton_path = paths[closest_frontier_robot_index]
+        
+        frontier_paths_dist = defaultdict(list)
+        for f in frontier_robots_indices:
+            frontier_paths_dist[dist[f]].append(f)
+        
+        self.skeleton_paths = [paths[f] for f in frontier_paths_dist[min(frontier_paths_dist.keys())]]
         
     def _push_robot(self):
-        if not self.skeleton_path:
+        if not self.skeleton_paths:
             self.robots.append(self.entrypoint)
             return
 
-        self.robots.append(self.entrypoint)
-        self.skeleton_path.append(len(self.robots) - 1)
-        reversed_skeleton_path = list(reversed(self.skeleton_path))
-        for i, robot in enumerate(reversed_skeleton_path):
-            if i == len(self.skeleton_path) - 1:
-                if self.deployment_positions[robot]:
-                    # Deploying robots on valid points. If there is an obstacle it will calculate a new deployment
-                    # position to simulate robot moving to desired position and hitting an obstacle.
-                    pos, is_obstacle = ensure_valid_deploy_position(self.map, self.robots[robot],
-                                                                    self.deployment_positions[robot][0])
-                    self.robots[robot] = pos
-                    if is_obstacle:
-                        self.robot_is_obstacle[robot] = True
-                else:
-                    print("The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration on "
-                          "skeleton construction so that it doesn't choose this paths")
-            else:
-                next_robot = reversed_skeleton_path[i + 1]
-                self.robots[robot] = self.robots[next_robot]
-                self.robot_is_obstacle[robot] = self.robot_is_obstacle[next_robot]
+        for path in self.skeleton_paths:
+            frontier, *inner_path = path
+            try:
+                next_pos = self.robots[frontier]
+                self.robots[frontier], self.robot_is_obstacle[frontier] = ensure_valid_deploy_position(self.map, self.robots[frontier], self.deployment_positions[frontier], self.sigma)
 
+                for inner_robot in inner_path:
+                    curr_pos = self.robots[inner_robot]
+                    self.robots[inner_robot] = next_pos
+                    next_pos = curr_pos
+
+                self.robots.append(self.entrypoint)
+            except ValueError as e:
+                print(e, '\nTrying next available path.\n')
+            else:
+                self.skeleton_path = path + [len(self.robots) - 1]
+                break
+        else:
+            self.robot_is_obstacle[frontier] = True
+
+            
     def run_iter(self):
-        self._push_robot()
         self._update_simplices()
         self._update_fence_subcomplex()
+        self.plot.update_plot()
         self._update_skeleton_path()
+        self._push_robot()

@@ -32,16 +32,14 @@ class Plot:
                                                 o_x2 - o_x1, o_y2 - o_y1,
                                                 color='grey')
             ax.add_patch(rect)
-
-        ax.legend()
-        
+     
         self.ax = ax
         self.robots_obstacle_scatter = ax.scatter([], [], color='red', label='robots in contact with obstacles')
         self.skeleton_scatter = ax.scatter([], [], color='green', label='skeleton path')
         self.robots_scatter = ax.scatter([], [], color=[1., 0.63647424, 0.33815827, 1.], label='robots')
         self.controller = controller
         self.simplices, self.texts = [], {}
-
+        self.ax.legend()
         self.update_plot()
 
     def update_plot(self):

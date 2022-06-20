@@ -61,12 +61,12 @@ def get_graph(one_simplices: list[list[int]], fence_subcomplex: FenceSubcomplex,
     graph = defaultdict(list[list[int]])
     for one_simplex in one_simplices:
         if one_simplex in fence_subcomplex.obstacle_simplices:
-            graph[one_simplex[1]].append([one_simplex[0], 2])
-            graph[one_simplex[0]].append([one_simplex[1], 2])
+            graph[one_simplex[1]].append([one_simplex[0], 4])
+            graph[one_simplex[0]].append([one_simplex[1], 4])
         else:
-            # Note: Adding weight 2 for robots in contact with obstacle as well
-            graph[one_simplex[1]].append([one_simplex[0], 2 if robot_is_obstacle[one_simplex[0]] else 1])
-            graph[one_simplex[0]].append([one_simplex[1], 2 if robot_is_obstacle[one_simplex[1]] else 1])
+            # Note: Adding weight 4 for robots in contact with obstacle as well
+            graph[one_simplex[1]].append([one_simplex[0], 4 if robot_is_obstacle[one_simplex[0]] else 1])
+            graph[one_simplex[0]].append([one_simplex[1], 4 if robot_is_obstacle[one_simplex[1]] else 1])
 
     return graph
 
@@ -117,68 +117,82 @@ def lazy_dijkstra(graph, root, n):
 
 # ------------------------- get_fence_subcomplex functions  ---------------------------#
 
-def ensure_valid_deploy_position(sim_map: Map, current_position: list[float], deploy_position: list,
-                                 obstacle_radius: float = 0.3, margin: float = 0.05):
+def ensure_valid_deploy_position(
+        sim_map: Map, 
+        current_position: list[float], 
+        deploy_positions: list[list], 
+        sigma: float,
+        obstacle_radius: float = 0.3, 
+        margin: float = 0.05
+    ):
     """
     a. Check if the deployment position is:
         1. valid(it's not inside obstacle or outside map): keep position,
             else move to the closest valid position(-margin) - make
         2. is near(obstacle_radius) walls or obstacle: is_obstacle == True
     """
-    cx, cy = current_position
-    dx, dy = deploy_position
-    (m_x1, m_y1), (m_x2, m_y2) = sim_map.boundary
-    is_obstacle = False
-    # check if new deploy is inside map
-    a_den = dx - cx
-    a = 0 if a_den == 0 else (dy - cy) / a_den
-    b = cy - a * cx
-    if dx <= m_x1:
-        dx = m_x1 + margin
-        is_obstacle = True
-    elif dx >= m_x2 - obstacle_radius:
-        dx = m_x2 - margin
-        is_obstacle = True
-    elif dx <= m_x1 + obstacle_radius or dx >= m_x2 - obstacle_radius:
-        is_obstacle = True  # robot near map wall
 
-    if dy <= m_y1:
-        dy = m_y1 + margin
-        is_obstacle = True
-    elif dy >= m_y2:
-        dy = m_y2 - margin
-        is_obstacle = True
-    elif dy <= m_y1 + obstacle_radius or dy >= m_y2 - obstacle_radius:
-        is_obstacle = True  # robot near map wall
+    if deploy_positions == []:
+        raise ValueError("The robot chosen by dijkstra doesn't have a deployment angle. Implement filtration on "
+        "skeleton construction so that it doesn't choose this paths")
 
-    # check if new deploy is inside obstacles
-    a_den = dx - cx
-    a = 0 if a_den == 0 else (dy - cy) / a_den
-    b = cy - a * cx
-    for (o_x1, o_y1), (o_x2, o_y2) in sim_map.obstacles:
-        if o_x1 <= dx <= o_x2:
-            if o_y1 <= dy <= o_y2:
-                if cx <= o_x1:
-                    dx = o_x1 - margin
-                    is_obstacle = True
-                elif cx >= o_x2:
-                    dx = o_x2 + margin
-                    is_obstacle = True
-                if cy <= o_y1:
-                    dy = o_y1 - margin
-                    is_obstacle = True
-                elif cy >= o_y2:
-                    dy = o_y2 + margin
-                    is_obstacle = True
-            elif o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
-                is_obstacle = True
-        elif o_x1 - obstacle_radius <= dx <= o_x2 + obstacle_radius and \
-                o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
-            is_obstacle = True  # robot near obstacle
+    for deploy_position in deploy_positions:
+        cx, cy = current_position
+        dx, dy = deploy_position
+        (m_x1, m_y1), (m_x2, m_y2) = sim_map.boundary
+        is_obstacle = False
 
-    # check if 
+        # check if new deploy is inside map
+        a_den = dx - cx
+        a = 0 if a_den == 0 else (dy - cy) / a_den
+        b = cy - a * cx
+        if dx <= m_x1:
+            dx = m_x1 + margin
+            is_obstacle = True
+        elif dx >= m_x2 - obstacle_radius:
+            dx = m_x2 - margin
+            is_obstacle = True
+        elif dx <= m_x1 + obstacle_radius or dx >= m_x2 - obstacle_radius:
+            is_obstacle = True  # robot near map wall
 
-    return [dx, dy], is_obstacle
+        if dy <= m_y1:
+            dy = m_y1 + margin
+            is_obstacle = True
+        elif dy >= m_y2:
+            dy = m_y2 - margin
+            is_obstacle = True
+        elif dy <= m_y1 + obstacle_radius or dy >= m_y2 - obstacle_radius:
+            is_obstacle = True  # robot near map wall
+
+        # check if new deploy is inside obstacles
+        a_den = dx - cx
+        a = 0 if a_den == 0 else (dy - cy) / a_den
+        b = cy - a * cx
+        for (o_x1, o_y1), (o_x2, o_y2) in sim_map.obstacles:
+            if o_x1 <= dx <= o_x2:
+                if o_y1 <= dy <= o_y2:
+                    if cx <= o_x1:
+                        dx = o_x1 - margin
+                        is_obstacle = True
+                    elif cx >= o_x2:
+                        dx = o_x2 + margin
+                        is_obstacle = True
+                    if cy <= o_y1:
+                        dy = o_y1 - margin
+                        is_obstacle = True
+                    elif cy >= o_y2:
+                        dy = o_y2 + margin
+                        is_obstacle = True
+                elif o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
+                    is_obstacle = True
+            elif o_x1 - obstacle_radius <= dx <= o_x2 + obstacle_radius and \
+                    o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
+                is_obstacle = True  # robot near obstacle
+
+        if distance(current_position, [dx, dy]) > sigma:
+            return [dx, dy], is_obstacle
+    else:
+        raise ValueError("The valid deploy position is too close to the current position.")
 
 
 def is_obstacle_simplex(one_simplex: list[int], robot_is_obstacle: defaultdict[bool]) -> bool:

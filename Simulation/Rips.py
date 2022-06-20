@@ -3,12 +3,11 @@ from Visualization import Plot
 
 
 def main(): 
-    controller = Controller('config.yaml', 'sim_004')
+    controller = Controller('config.yaml', 'sim_002')
     plot = Plot(controller)
     controller.plot = plot
     while not controller.is_full_covered:
         controller.run_iter()
-        plot.update_plot()
 
     input('Press any key to end.')
 
