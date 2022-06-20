@@ -189,6 +189,36 @@ def ensure_valid_deploy_position(
                     o_y1 - obstacle_radius <= dy <= o_y2 + obstacle_radius:
                 is_obstacle = True  # robot near obstacle
 
+        # check if deploy is after a obstacle
+        for (o_x1, o_y1), (o_x2, o_y2) in sim_map.obstacles:
+            if (
+                ( 
+                    (cx < o_x1 and dx > o_x2) or
+                    (dx < o_x1 and cx > o_x2) 
+                ) and
+                o_y1 <= cy <= o_y2 and 
+                o_y1 <= dy <= o_y2
+            ):
+                is_obstacle = True
+                if dx <= o_x1:
+                    dx = o_x2 + margin
+                elif dx >= o_x2:
+                    dx = o_x1 - margin
+            elif (
+                ( 
+                    (cy < o_y1 and dy > o_y2) or
+                    (dy < o_y1 and cy > o_y2) 
+                ) and
+                o_x1 <= cx <= o_x2 and 
+                o_x1 <= dx <= o_x2
+            ):
+                is_obstacle = True
+                if dy <= o_y1:
+                    dy = o_y2 + margin
+                elif dy >= o_y2:
+                    dy = o_y1 - margin
+    
+        print(distance(current_position, [dx, dy]))
         if distance(current_position, [dx, dy]) > sigma:
             return [dx, dy], is_obstacle
     else:
