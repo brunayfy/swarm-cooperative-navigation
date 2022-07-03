@@ -120,6 +120,7 @@ def lazy_dijkstra(graph, root, n):
 
 def ensure_valid_deploy_position(
         sim_map: Map, 
+        robots: list[list],
         current_position: list[float], 
         deploy_positions: list[list], 
         sigma: float,
@@ -218,9 +219,17 @@ def ensure_valid_deploy_position(
                     dy = o_y2 + margin
                 elif dy >= o_y2:
                     dy = o_y1 - margin
-    
-        if distance(current_position, [dx, dy]) > sigma:
-            return [dx, dy], is_obstacle
+        
+        continue_outer_loop = False
+        for r in robots:
+            if distance(r, [dx, dy]) <= sigma:
+                continue_outer_loop = True
+                break
+        if continue_outer_loop:
+            continue
+
+        return [dx, dy], is_obstacle
+        
     else:
         raise ValueError("The valid deploy position is too close to the current position.")
 
@@ -240,12 +249,19 @@ def is_obstacle_simplex(one_simplex: list[int], robot_is_obstacle: defaultdict[b
 
 
 def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinate: list,
-                                     deployment_angle: float) -> list:
-    x1, y1 = robot_a_coordinate
-    x2, y2 = robot_b_coordinate
-    x3 = math.cos(deployment_angle) * (x2 - x1) - math.sin(deployment_angle) * (y2 - y1) + x1
-    y3 = math.sin(deployment_angle) * (x2 - x1) + math.cos(deployment_angle) * (y2 - y1) + y1
-    return [x3, y3]
+                                     deployment_angle: float, r: float) -> list:
+    
+    a, b = robot_a_coordinate
+    c, d = robot_b_coordinate
+    rot = np.array(( (np.cos(deployment_angle), -np.sin(deployment_angle)),
+                     (np.sin(deployment_angle),  np.cos(deployment_angle)) ))
+    
+    ab_vec = np.array([c-a, d-b])
+    ab_vec_norm = (ab_vec / np.linalg.norm(ab_vec)) * 0.95
+    rotated_scaled_vector = rot.dot(ab_vec_norm) * r
+    x = rotated_scaled_vector[0] + a
+    y = rotated_scaled_vector[1] + b
+    return [x, y]
 
 
 def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,

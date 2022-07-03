@@ -35,7 +35,7 @@ class Controller:
         # Deploy second robot in an angle of pi/3 of the first one
         second_robot_deploy_position = [[self.entrypoint[0] + self.robot_radius / 2,
                                         self.entrypoint[1] + math.sin(math.pi / 3) * self.robot_radius]]
-        pos, is_obstacle = ensure_valid_deploy_position(self.map, self.entrypoint, second_robot_deploy_position, self.sigma)
+        pos, is_obstacle = ensure_valid_deploy_position(self.map, self.robots, self.entrypoint, second_robot_deploy_position, self.sigma)
         self.robots.append(pos)
         if is_obstacle:
             self.robot_is_obstacle[1] = True
@@ -184,10 +184,10 @@ class Controller:
                     # Only appending deployment positions for frontier robots
                     for theta in theta_i_j_new:
                         self.deployment_positions[i].append(
-                            get_deployment_absolute_position(self.robots[i], self.robots[j], theta))
+                            get_deployment_absolute_position(self.robots[i], self.robots[j], theta, self.robot_radius))
                     for theta in theta_j_i_new:
                         self.deployment_positions[j].append(
-                            get_deployment_absolute_position(self.robots[j], self.robots[i], theta))
+                            get_deployment_absolute_position(self.robots[j], self.robots[i], theta, self.robot_radius))
 
         self.fence_subcomplex = FenceSubcomplex(obstacle_simplices, frontier_simplices)
 
@@ -215,7 +215,7 @@ class Controller:
             frontier, *inner_path = path
             try:
                 next_pos = self.robots[frontier]
-                self.robots[frontier], self.robot_is_obstacle[frontier] = ensure_valid_deploy_position(self.map, self.robots[frontier], self.deployment_positions[frontier], self.sigma)
+                self.robots[frontier], self.robot_is_obstacle[frontier] = ensure_valid_deploy_position(self.map, self.robots, self.robots[frontier], self.deployment_positions[frontier], self.sigma)
 
                 for inner_robot in inner_path:
                     curr_pos = self.robots[inner_robot]
