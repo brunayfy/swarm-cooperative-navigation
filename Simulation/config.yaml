@@ -32,8 +32,44 @@ sim_003:
 sim_004:
   map:
      "boundary"   : [[0, 0], [10, 12]]
-     "obstacles"  : [[[3,0], [4,6]], [[8,0], [9,7]]]
+     "obstacles"  : [[[3,0], [4,6]], [[7,0], [8,7]]]
      "entrypoint" : [1, 1]
   robot_radius: 1.414213562
   sigma: 0.2
   beta: 0.02
+
+sim_005:
+   map:
+      "boundary"   : [[0, 0], [10, 12]]
+      "obstacles"  : [[[0,1.25],[1.5,3]]]
+      "entrypoint" : [1, 1]
+   robot_radius: 1.414213562
+   sigma: 0.2
+   beta: 0.02
+
+sim_006:
+   map:
+      "boundary"   : [[0, 0], [10, 12]]
+      "obstacles"  : [[[0,2],[8,2.2]], [[2,4],[10,4.2]], [[0,6],[8,6.2]]]
+      "entrypoint" : [1, 1]
+   robot_radius: 1.414213562
+   sigma: 0.2
+   beta: 0.02
+
+sim_007:
+   map:
+      "boundary"   : [[0, 0], [10, 12]]
+      "obstacles"  : [[[0,2],[8,2.2]], [[8,2],[8.2,9]], [[2,9],[8.2,9.2]], [[2,4.5],[2.2,9.2]], [[2.2,4.5],[6,4.7]], [[6,4.5],[6.2,7.5]]]
+      "entrypoint" : [1, 1]
+   robot_radius: 1.414213562
+   sigma: 0.2
+   beta: 0.02
+
+sim_008:
+   map:
+      "boundary"   : [[0, 0], [10, 12]]
+      "obstacles"  : [[[5,2],[5.2,10]], [[2,6.5],[8,6.7]]]
+      "entrypoint" : [1, 1]
+   robot_radius: 1.414213562
+   sigma: 0.2
+   beta: 0.02

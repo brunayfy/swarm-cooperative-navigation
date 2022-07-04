@@ -151,7 +151,7 @@ def ensure_valid_deploy_position(
         if dx <= m_x1:
             dx = m_x1 + margin
             is_obstacle = True
-        elif dx >= m_x2 - obstacle_radius:
+        elif dx >= m_x2:
             dx = m_x2 - margin
             is_obstacle = True
         elif dx <= m_x1 + obstacle_radius or dx >= m_x2 - obstacle_radius:
@@ -166,7 +166,7 @@ def ensure_valid_deploy_position(
         elif dy <= m_y1 + obstacle_radius or dy >= m_y2 - obstacle_radius:
             is_obstacle = True  # robot near map wall
 
-        # check if new deploy is inside obstacles
+        # check if new deploy is inside obstacles or if robot is near obstacle
         a_den = dx - cx
         a = 0 if a_den == 0 else (dy - cy) / a_den
         b = cy - a * cx
@@ -220,6 +220,10 @@ def ensure_valid_deploy_position(
                 elif dy >= o_y2:
                     dy = o_y1 - margin
         
+        # check if new deploy position is obstructed
+        [dx, dy], is_obstacle_from_obstruction = check_obstruction_between_robots([cx, cy], [dx, dy], sim_map.obstacles, margin)
+        is_obstacle = is_obstacle or is_obstacle_from_obstruction
+        
         continue_outer_loop = False
         for r in robots:
             if distance(r, [dx, dy]) <= sigma:
@@ -257,7 +261,7 @@ def get_deployment_absolute_position(robot_a_coordinate: list, robot_b_coordinat
                      (np.sin(deployment_angle),  np.cos(deployment_angle)) ))
     
     ab_vec = np.array([c-a, d-b])
-    ab_vec_norm = (ab_vec / np.linalg.norm(ab_vec)) * 0.95
+    ab_vec_norm = (ab_vec / np.linalg.norm(ab_vec))
     rotated_scaled_vector = rot.dot(ab_vec_norm) * r
     x = rotated_scaled_vector[0] + a
     y = rotated_scaled_vector[1] + b
@@ -275,8 +279,10 @@ def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
         else:
             k_i = min([[k, abs(get_angle(robots[i], robots[j], robots[k]))] for k in S_i], key=lambda x: x[1])[0]
             theta_i_j_k_i = get_angle(robots[i], robots[j], robots[k_i])
-            if abs(theta_i_j_k_i) < pi / 3 - 2 * beta and sorted([j,k_i]) in one_simplices:
-                obstacle_simplices.append([i, k_i])
+            if abs(theta_i_j_k_i) < pi / 3 - 2 * beta:
+                if sorted([j,k_i]) not in one_simplices:
+                    obstacle_simplices.append(sorted([i, k_i]))
+                    obstacle_simplices.append([i,j])
             else:
                 theta_i_j_new.append(sigma * min([pi / 3, abs(theta_i_j_k_i / 2)]))
 
@@ -286,8 +292,10 @@ def get_deployment_angle(obstacle_simplices, robots: list, one_simplex: list,
             k_j = min([[k, abs(get_angle(robots[j], robots[i], robots[k]))] for k in S_j], key=lambda x: x[1])[0]
             theta_j_i_k_j = get_angle(robots[j], robots[i], robots[k_j])
 
-            if abs(theta_j_i_k_j) < pi / 3 - 2 * beta and sorted([i,k_j]) in one_simplices:
-                obstacle_simplices.append([j, k_j])
+            if abs(theta_j_i_k_j) < pi / 3 - 2 * beta :
+                if sorted([i,k_j]) not in one_simplices:
+                    obstacle_simplices.append(sorted([j, k_j])) 
+                    obstacle_simplices.append([i,j])
 
             else:
                 theta_j_i_new.append(-sigma * min([pi / 3, abs(theta_j_i_k_j / 2)]))
@@ -405,3 +413,85 @@ def filter_exceptions(robots: list, simplices: dict) -> tuple[list, list]:
             normal[2] = remove_one_simplex(higher_distance_exception, normal[2])
 
     return exception, normal[1], normal[2]
+
+
+def check_obstruction_between_robots(current_robot, deploy_robot, obstacles, margin):
+    # Check if one-simplices cross an obstacle(robots cannot see each other)
+    c_x, c_y = current_robot
+    d_x, d_y = deploy_robot
+
+    # Finding line equation : y = ax + b
+    a_den = d_x - c_x
+    if a_den != 0:
+        a = (d_y - c_y) / a_den
+        b = c_y - a * c_x
+
+    for (obs_x1, obs_y1), (obs_x2, obs_y2) in obstacles:
+        if a_den == 0:
+            # two robots are vertically aligned
+            if obs_x1 <= c_x <= obs_x2 and point_inside_line(c_x, obs_y1, c_x, c_y, d_x, d_y):
+                return True
+        else:
+            y1 = a * obs_x1 + b
+            if obs_y1 <= y1 <= obs_y2 and point_inside_line(obs_x1, y1, c_x, c_y, d_x, d_y):
+                if d_y > obs_y2 or c_y > obs_y2:
+                    if d_y > c_y:
+                        d_x = obs_x1 - margin
+                    else:
+                        d_y = obs_y2 + margin
+                else:
+                    if d_y > c_y:
+                        d_y = obs_y1 - margin
+                    else:
+                        d_x = obs_x1 - margin
+
+                return [d_x, d_y], True
+            else:
+                y2 = a * obs_x2 + b
+                if obs_y1 <= y2 <= obs_y2 and point_inside_line(obs_x2, y2, c_x, c_y, d_x, d_y):
+                    if d_y > obs_y2 or c_y > obs_y2:
+                        if d_y > c_y:
+                            d_x = obs_x2 + margin
+                        else:
+                            d_y = obs_y2 + margin
+                    else:
+                        if d_y > c_y:
+                            d_y = obs_y1 - margin
+                        else:
+                            d_x = obs_x2 + margin
+                    return [d_x, d_y], True
+                else:
+                    if a == 0:
+                        # two robots horizontally aligned
+                        if obs_y1 <= c_y <= obs_y2 and point_inside_line(obs_x1, c_y, c_x, c_y, d_x, d_y):
+                            return True
+                    else:
+                        x1 = (obs_y1 - b) / a
+                        if obs_x1 <= x1 <= obs_x2 and point_inside_line(x1, obs_y1, c_x, c_y, d_x, d_y):
+                            if d_x > obs_x2 or c_y > obs_x2:
+                                if d_y > c_y:
+                                    d_y = obs_y1 - margin
+                                else:
+                                    d_x = obs_x2 + margin
+                            else:
+                                if d_y > c_y:
+                                    d_y = obs_y1 - margin
+                                else:
+                                    d_x = obs_x1 - margin
+                            
+                            return [d_x, d_y], True
+                        else:
+                            x2 = (obs_y2 - b) / a
+                            if obs_x1 <= x2 <= obs_x2 and point_inside_line(x2, obs_y2, c_x, c_y, d_x, d_y):
+                                if d_x > obs_x2 or c_y > obs_x2:
+                                    if d_y > c_y:
+                                        d_x = obs_x2 + margin
+                                    else:
+                                        d_y = obs_y2 + margin
+                                else:
+                                    if d_y > c_y:
+                                        d_x = obs_x1 - margin
+                                    else:
+                                        d_y = obs_y2 + margin
+                                return [d_x, d_y], True
+    return [d_x, d_y], False

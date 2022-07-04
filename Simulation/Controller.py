@@ -100,6 +100,10 @@ class Controller:
         else:
             self.simplices[2] = two_simplex_to_add
 
+
+    def point_inside_line(px, py, ax, ay, bx, by):
+        return (ax <= px <= bx or bx <= px <= ax) and (by <= py <= ay or ay <= py <= by)
+
     def _check_if_simplex_is_obstructed(self, simplex: list[int], neighboors: list):
         # Check if one-simplices overlap
         i, j = simplex
@@ -204,7 +208,10 @@ class Controller:
         for f in frontier_robots_indices:
             frontier_paths_dist[dist[f]].append(f)
         
-        self.skeleton_paths = [paths[f] for f in frontier_paths_dist[min(frontier_paths_dist.keys())]]
+        self.skeleton_paths = []
+        for k in sorted(frontier_paths_dist.keys()):
+            self.skeleton_paths += [paths[f] for f in frontier_paths_dist[k]]
+        
         
     def _push_robot(self):
         if not self.skeleton_paths:
