@@ -2,6 +2,7 @@
 
 >This is a bachelor's thesis project of the Electrical Engineering School of the University of São Paulo.
 
+![](images/execution.gif)
 ## Chronogram
   
 |                              Activity                               | 17/6 | 28/6 | 12/7 | 26/7 | 02/8 | 16/8 | 30/8 | 13/09 | 27/9 |
