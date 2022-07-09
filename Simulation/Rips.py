@@ -3,7 +3,7 @@ from Visualization import Plot
 
 
 def main(): 
-    controller = Controller('config.yaml', 'sim_008')
+    controller = Controller('config.yaml', 'sim_001')
     plot = Plot(controller)
     controller.plot = plot
     i = 0
